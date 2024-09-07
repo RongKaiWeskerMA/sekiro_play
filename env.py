@@ -83,9 +83,9 @@ class Sekiro_Env:
         Parameters:
         - action (int): The action to be taken, as an integer index.
         """
-        message, action = self.action_interface.action_map.get(action)
+        message, action_func = self.action_interface.action_map.get(action)
         print(f"{message}")
-        action()
+        action_func()
 
     def cal_reward(self, new_state):
         """
