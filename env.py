@@ -65,7 +65,7 @@ class Sekiro_Env:
         hwin_sekiro = win32gui.FindWindow(None, 'Sekiro')
         win32gui.SetForegroundWindow(hwin_sekiro)
         img = grab_window(hwin_sekiro, game_resolution=self.game_resolution, SHOW_IMAGE=False)
-        
+
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(img_rgb)
         img_tensor = self.transform(img_pil).cuda()

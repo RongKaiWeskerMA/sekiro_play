@@ -61,7 +61,7 @@ def grab_window(hwin, game_resolution=(1024,768), SHOW_IMAGE=False):
         bmp = win32ui.CreateBitmap()
         bmp.CreateCompatibleBitmap(srcdc, width, height)
         memdc.SelectObject(bmp)
-
+        # memdc.BitBlt((0, 0), (width, height), srcdc, (left, top), win32con.SRCCOPY)
         memdc.BitBlt((0, 0), (width, height), srcdc, (offset_sides, bar_height+offset_height_top), win32con.SRCCOPY)
         
         signedIntsArray = bmp.GetBitmapBits(True)
