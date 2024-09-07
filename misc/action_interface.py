@@ -16,16 +16,16 @@ from ctypes import *
 from pymem import *
 import numpy as np
 
-from key_input import key_check, mouse_check, mouse_l_click_check, mouse_r_click_check
-from key_output import set_pos, HoldKey, ReleaseKey
-from key_output import left_click, hold_left_click, release_left_click
-from key_output import right_click, hold_right_click, release_right_click
-from key_output import w_char, s_char, a_char, d_char, n_char, q_char, b_char, j_char
-from key_output import ctrl_char, shift_char, space_char, up_key, down_key
-from key_output import r_char, one_char, two_char, three_char, four_char
-from key_output import p_char, e_char, c_char_, t_char, cons_char, ret_char
-from key_output import m_char, u_char, under_char, g_char, esc_char
-from key_output import i_char, v_char, o_char, g_char, k_char, seven_char, x_char, c_char2, y_char
+from .key_input import key_check, mouse_check, mouse_l_click_check, mouse_r_click_check
+from .key_output import set_pos, HoldKey, ReleaseKey
+from .key_output import left_click, hold_left_click, release_left_click
+from .key_output import right_click, hold_right_click, release_right_click
+from .key_output import w_char, s_char, a_char, d_char, n_char, q_char, b_char, j_char
+from .key_output import ctrl_char, shift_char, space_char, up_key, down_key
+from .key_output import r_char, one_char, two_char, three_char, four_char
+from .key_output import p_char, e_char, c_char_, t_char, cons_char, ret_char
+from .key_output import m_char, u_char, under_char, g_char, esc_char
+from .key_output import i_char, v_char, o_char, g_char, k_char, seven_char, x_char, c_char2, y_char
 import pyautogui
 
 class action_interface:

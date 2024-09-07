@@ -11,6 +11,8 @@ from PIL import Image
 from network import DQN
 from pyautogui import press, typewrite, hotkey
 from misc.action_interface import action_interface
+import cv2
+  
 
 class Sekiro_Env:
     """
@@ -87,6 +89,29 @@ class Sekiro_Env:
         print(f"{message}")
         action_func()
 
+    def extract_self_health(self, next_state):
+        img = cv2.cvtColor(next_state, cv2.COLOR_RGB2GRAY)
+        x_min, x_max = 74, 491
+        y_min, y_max = 653, 658
+        screen_roi = img[y_min:y_max, x_min:x_max]
+        cond1 = np.where(screen_roi[3] > 60, True, False)
+        cond2 = np.where(screen_roi[3] < 100, True, False)
+        health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
+        health *= 100
+        return health
+    
+    def extract_boss_health(self, next_state):
+        img = cv2.cvtColor(next_state, cv2.COLOR_RGB2GRAY)
+        x_min, x_max = 74, 491
+        y_min, y_max = 653, 658
+        screen_roi = img[y_min:y_max, x_min:x_max]
+        cond1 = np.where(screen_roi[3] > 60, True, False)
+        cond2 = np.where(screen_roi[3] < 100, True, False)
+        health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
+        health *= 100
+        return health
+        
+    
     def cal_reward(self, new_state):
         """
         Calculate the reward based on the new state of the game.
@@ -143,7 +168,7 @@ class Sekiro_Env:
         """
         self.take_action(action)
         new_state, cv2_img = self.get_state()
-        reward = self.cal_reward(new_state)
+        reward = self.cal_reward(cv2_img)
         done = self.check_done(cv2_img)
         
         return new_state, reward, done
@@ -157,6 +182,9 @@ class Sekiro_Env:
         self.action_interface.reset_state()
 
 if __name__ == "__main__":
+    # cv2.imshow('test_health', next_state)
+    # cv2.waitKey(0)
+    
     env = Sekiro_Env()
     while True:
         tensor, _ = env.get_state()
