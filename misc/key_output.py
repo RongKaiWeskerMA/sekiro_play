@@ -43,6 +43,7 @@ esc_char=0x01
 j_char=0x24
 up_key=0xC8
 down_key=0xD0
+l_char=0x26
 
 class KeyBdInput(ctypes.Structure):
     _fields_ = [("wVk", ctypes.c_ushort),

@@ -45,10 +45,10 @@ def click_event(event, x, y, flags, params):
 if __name__=="__main__": 
   
     # reading the image 
-    img = cv2.imread('assets/half_health.png')
+    img = cv2.imread('assets/check.png')
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    x_min, x_max = 74, 491
-    y_min, y_max = 653, 658
+    x_min, x_max = 66, 494
+    y_min, y_max = 666, 674
     screen_roi = img[y_min:y_max, x_min:x_max]
     sns.heatmap(screen_roi)
     plt.show()

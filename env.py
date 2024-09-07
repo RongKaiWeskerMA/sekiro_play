@@ -12,7 +12,8 @@ from network import DQN
 from pyautogui import press, typewrite, hotkey
 from misc.action_interface import action_interface
 import cv2
-  
+from misc.key_input import key_check
+from misc.key_output import HoldKey, ReleaseKey, k_char, l_char
 
 class Sekiro_Env:
     """
@@ -43,8 +44,9 @@ class Sekiro_Env:
         self.state = torch.zeros(1280, 720).cuda()
         self.game_resolution = game_resolution
         self.action_interface = action_interface()
-        self.template_path_death = cv2.imread('asset/dead.png', 0)
+        self.template_path_death = cv2.imread('assets/dead.png', 0)
         self.threshold = 0.6
+        self.counter = 0
 
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -91,24 +93,26 @@ class Sekiro_Env:
 
     def extract_self_health(self, next_state):
         img = cv2.cvtColor(next_state, cv2.COLOR_RGB2GRAY)
-        x_min, x_max = 74, 491
-        y_min, y_max = 653, 658
+        x_min, x_max = 66, 494
+        y_min, y_max = 666, 674
         screen_roi = img[y_min:y_max, x_min:x_max]
-        cond1 = np.where(screen_roi[3] > 60, True, False)
-        cond2 = np.where(screen_roi[3] < 100, True, False)
+        cond1 = np.where(screen_roi[4] > 60, True, False)
+        cond2 = np.where(screen_roi[4] < 90, True, False)
         health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
         health *= 100
+        print(f"Sekrio health is {health}")
         return health
     
     def extract_boss_health(self, next_state):
         img = cv2.cvtColor(next_state, cv2.COLOR_RGB2GRAY)
-        x_min, x_max = 74, 491
-        y_min, y_max = 653, 658
+        x_min, x_max = 66, 494
+        y_min, y_max = 666, 674
         screen_roi = img[y_min:y_max, x_min:x_max]
         cond1 = np.where(screen_roi[3] > 60, True, False)
-        cond2 = np.where(screen_roi[3] < 100, True, False)
+        cond2 = np.where(screen_roi[3] < 90, True, False)
         health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
         health *= 100
+        print(f"boss_health is: {health}")
         return health
         
     
@@ -125,7 +129,8 @@ class Sekiro_Env:
         Returns:
         - reward (float): The calculated reward (currently not implemented).
         """
-        pass
+        self.extract_self_health(new_state)
+        return 0
 
     def check_done(self, new_state):
         """
@@ -170,7 +175,9 @@ class Sekiro_Env:
         new_state, cv2_img = self.get_state()
         reward = self.cal_reward(cv2_img)
         done = self.check_done(cv2_img)
-        
+        if self.counter == 10:
+            cv2.imwrite('assets/check.png', cv2_img)
+        self.counter += 1
         return new_state, reward, done
 
     def reset(self):
@@ -184,7 +191,33 @@ class Sekiro_Env:
 if __name__ == "__main__":
     # cv2.imshow('test_health', next_state)
     # cv2.waitKey(0)
-    
+    def model(state):
+        action = random.randint(0, 9)
+        return action
+
     env = Sekiro_Env()
+    obs = env.get_state()
+    
     while True:
-        tensor, _ = env.get_state()
+        action = model(obs)
+        obs, reward, done = env.step(action)
+        if done:
+            time.sleep(4)
+            HoldKey(k_char)
+            time.sleep(0.3)
+            ReleaseKey(k_char)
+            time.sleep(10)
+            env.reset()
+            time.sleep(10)
+            HoldKey(l_char)
+            time.sleep(0.3)
+            ReleaseKey(l_char)
+
+        keys_pressed_tp = key_check()
+        if 'Q' in keys_pressed_tp:
+            # exit loop
+            print('exiting...')
+            
+            break
+
+
