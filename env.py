@@ -45,16 +45,16 @@ class Sekiro_Env:
         self.game_resolution = game_resolution
         self.action_interface = action_interface()
         self.template_path_death = cv2.imread('assets/dead.png', 0)
-        self.threshold = 0.6
+        self.threshold = 0.57
         self.counter = 0
-
+        self.use_color_gesture = False
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     
-    def get_state(self):
+    def get_state(self, if_tensor=False):
         """
         Capture the current state of the game window.
         
@@ -69,12 +69,14 @@ class Sekiro_Env:
         hwin_sekiro = win32gui.FindWindow(None, 'Sekiro')
         win32gui.SetForegroundWindow(hwin_sekiro)
         img = grab_window(hwin_sekiro, game_resolution=self.game_resolution, SHOW_IMAGE=False)
-
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(img_rgb)
-        img_tensor = self.transform(img_pil).cuda()
         
-        return img_tensor, img_rgb
+        # not sure if we need torch tensor at this stage
+        if if_tensor:
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img_pil = Image.fromarray(img_rgb)
+            img_tensor = self.transform(img_pil).cuda()
+        
+        return img
 
     def take_action(self, action):
         """
@@ -92,7 +94,7 @@ class Sekiro_Env:
         action_func()
 
     def extract_self_health(self, next_state):
-        img = cv2.cvtColor(next_state, cv2.COLOR_RGB2GRAY)
+        img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
         x_min, x_max = 66, 494
         y_min, y_max = 666, 674
         screen_roi = img[y_min:y_max, x_min:x_max]
@@ -100,21 +102,59 @@ class Sekiro_Env:
         cond2 = np.where(screen_roi[4] < 90, True, False)
         health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
         health *= 100
-        print(f"Sekrio health is {health}")
+        print(f"Sekrio_health is {health}")
         return health
     
     def extract_boss_health(self, next_state):
-        img = cv2.cvtColor(next_state, cv2.COLOR_RGB2GRAY)
-        x_min, x_max = 66, 494
-        y_min, y_max = 666, 674
+        img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
+        x_min, x_max = 67, 349
+        y_min, y_max = 53, 61
         screen_roi = img[y_min:y_max, x_min:x_max]
-        cond1 = np.where(screen_roi[3] > 60, True, False)
-        cond2 = np.where(screen_roi[3] < 90, True, False)
+        cond1 = np.where(screen_roi[4] > 50, True, False)
+        cond2 = np.where(screen_roi[4] < 80, True, False)
         health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
         health *= 100
         print(f"boss_health is: {health}")
         return health
+    
+
+    def extract_self_gesture(self, next_state):
+        img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
+        x_min, x_max = 523, 779
+        y_min, y_max = 636, 644
+        screen_roi = img[y_min:y_max, x_min:x_max]
+        cond1 = np.where(screen_roi[4] > 80, True, False)
+        cond2 = np.where(screen_roi[4] < 120, True, False)
+        gesture = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
+        gesture *= 100
+        print(f"Sekiro_gesture is: {gesture}")
+        return gesture
+
+
+    def extract_boss_gesture(self, next_state):
+        if self.use_color_gesture:
+            img = next_state
+            x_min, x_max = 427, 869
+            y_min, y_max = 32, 38
+            screen_roi = img[y_min:y_max, x_min:x_max]
+            hsv = cv2.cvtColor(screen_roi, cv2.COLOR_BGR2HSV) 
+            lower = np.array([22, 93, 0])
+            upper = np.array([45, 255, 255])
+            mask = cv2.inRange(hsv, lower, upper) 
+            cv2.imshow("Mask", mask) 
+        else:
+            img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
+            x_min, x_max = 427, 869
+            y_min, y_max = 32, 38
+            screen_roi = img[y_min:y_max, x_min:x_max]
+            cond1 = np.where(screen_roi[3] > 60, True, False)
+            cond2 = np.where(screen_roi[3] < 90, True, False)
+            gesture = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
+            gesture *= 100
         
+        
+        print(f"boss_gesture is: {gesture}")
+        return gesture
     
     def cal_reward(self, new_state):
         """
@@ -129,7 +169,11 @@ class Sekiro_Env:
         Returns:
         - reward (float): The calculated reward (currently not implemented).
         """
-        self.extract_self_health(new_state)
+        self_health = self.extract_self_health(new_state)
+        self_gesture = self.extract_self_gesture(new_state)
+
+        boss_health = self.extract_boss_health(new_state)
+
         return 0
 
     def check_done(self, new_state):
@@ -145,7 +189,7 @@ class Sekiro_Env:
         Returns:
         - done (bool): True if the game is over, False otherwise.
         """
-        gray_state = cv2.cvtColor(new_state, cv2.COLOR_RGB2GRAY)
+        gray_state = cv2.cvtColor(new_state, cv2.COLOR_BGR2GRAY)
         res = cv2.matchTemplate(gray_state, self.template_path_death, cv2.TM_CCOEFF_NORMED)
 
         if np.max(res) >= self.threshold:
@@ -172,13 +216,13 @@ class Sekiro_Env:
         - done (bool): Whether the game has reached a terminal state.
         """
         self.take_action(action)
-        new_state, cv2_img = self.get_state()
+        cv2_img = self.get_state()
         reward = self.cal_reward(cv2_img)
         done = self.check_done(cv2_img)
-        if self.counter == 10:
-            cv2.imwrite('assets/check.png', cv2_img)
+        if (self.counter%5) ==0 :
+            cv2.imwrite(f'test_imgs/check_{self.counter}.png', cv2_img)
         self.counter += 1
-        return new_state, reward, done
+        return cv2_img, reward, done
 
     def reset(self):
         """
