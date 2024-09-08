@@ -19,8 +19,8 @@ This project implements a Deep Q-Network (DQN) agent to play Sekiro: Shadows Die
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/sekiro-rl.git
-   cd sekiro-rl
+   git clone https://github.com/yourusername/sekiro_rl.git
+   cd sekiro_rl
    ```
 
 2. Install the required dependencies:

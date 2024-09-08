@@ -9,6 +9,8 @@ import argparse
 from env import Sekiro_Env
 from network import DQN
 import os
+import cv2
+from torchvision import transforms
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
@@ -45,6 +47,22 @@ class Trainer:
         self.memory = ReplayBuffer(10000)  # You might want to make buffer size an argument
         self.steps_done = 0
 
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    def transform_state(self, state):
+        # convert opencv state to torch tensor
+        state = cv2.cvtColor(state, cv2.COLOR_BGR2RGB)
+        state_transpose = state.transpose((2, 0, 1))
+        state_tensor = torch.tensor(state_transpose, dtype=torch.float32)
+        state_tensor = self.transform(state_tensor)
+        state_tensor = state_tensor.to(self.device)
+        state_tensor = state_tensor.unsqueeze(0)
+        return state_tensor
+
+
     def select_action(self, state):
         sample = random.random()
         eps_threshold = self.args.eps_end + (self.args.eps_start - self.args.eps_end) * \
@@ -60,11 +78,17 @@ class Trainer:
         for epoch in range(self.args.epochs):
             state = self.env.get_state()
             episode_reward = 0
-
+            state = self.transform_state(state)
             for t in count():
                 action = self.select_action(state)
                 next_state, reward, done = self.env.step(action.item())
+                reward = torch.tensor([reward], device=self.device)
                 episode_reward += reward
+
+                if done:
+                    next_state = None
+                else:
+                    next_state = self.transform_state(next_state)
 
                 self.memory.push(state, action, next_state, reward)
 

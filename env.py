@@ -44,14 +44,10 @@ class Sekiro_Env:
         self.action_space = len(self.action_interface.action_map)
         self.observation_space = None
         self.template_path_death = cv2.imread('assets/dead.png', 0)
-        self.threshold = 0.57
+        self.threshold = 0.6
         self.counter = 0
         self.use_color_gesture = True
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+        
     
     def get_state(self, if_tensor=False):
         """
@@ -250,6 +246,7 @@ class Sekiro_Env:
         self.counter += 1
         if done:
             reward -= 100
+        print(f"step_reward is: {reward}")
 
         return cv2_img, reward, done
 

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
 class DQN(nn.Module):
     """
@@ -16,18 +17,18 @@ class DQN(nn.Module):
         super().__init__()
         
         # Load pre-trained ResNet18 model
-        resnet = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+        efficientnet = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
         
         # Get the number of features in the last layer of ResNet
-        num_features = resnet.fc.in_features
+        num_features = efficientnet.classifier[1].in_features
         
         # Replace the final fully connected layer
-        resnet.fc = nn.Sequential(
-            nn.Dropout(0.5),
+        efficientnet.classifier = nn.Sequential(
+            nn.Dropout(0.2),
             nn.Linear(num_features, action_space)
         )
         
-        self.model = resnet
+        self.model = efficientnet
 
     def forward(self, state):
         """
