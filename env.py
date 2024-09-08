@@ -125,7 +125,7 @@ class Sekiro_Env:
             y_min, y_max = 636, 644
             screen_roi = img[y_min:y_max, x_min:x_max]
             hsv = cv2.cvtColor(screen_roi, cv2.COLOR_BGR2HSV) 
-            lower = np.array([22, 93, 0])
+            lower = np.array([15, 100, 100])
             upper = np.array([45, 255, 255])
             mask = cv2.inRange(hsv, lower, upper) 
             cond = np.where(mask[4] > 0, True, False)
@@ -153,7 +153,7 @@ class Sekiro_Env:
             y_min, y_max = 32, 38
             screen_roi = img[y_min:y_max, x_min:x_max]
             hsv = cv2.cvtColor(screen_roi, cv2.COLOR_BGR2HSV) 
-            lower = np.array([22, 93, 0])
+            lower = np.array([15, 100, 100])
             upper = np.array([45, 255, 255])
             mask = cv2.inRange(hsv, lower, upper) 
             cond = np.where(mask[4] > 0, True, False)
