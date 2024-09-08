@@ -44,7 +44,7 @@ class Sekiro_Env:
         self.action_space = len(self.action_interface.action_map)
         self.observation_space = None
         self.template_path_death = cv2.imread('assets/dead.png', 0)
-        self.threshold = 0.6
+        self.threshold = 0.65
         self.counter = 0
         self.use_color_gesture = True
         
@@ -193,11 +193,11 @@ class Sekiro_Env:
             reward += 0.1
         
         if self_gesture < 70:
-            reward +=2
+            reward += 0.2
         
-        reward += (88 - boss_health) * 4
+        reward += (86 - boss_health) * 4
         reward += boss_gesture * 6
-        reward += self.counter
+        reward += self.counter *0.5
         return reward
 
     def check_done(self, new_state):
@@ -258,7 +258,7 @@ class Sekiro_Env:
         """
         self.counter = 0
         
-        time.sleep(4)
+        time.sleep(5)
         HoldKey(k_char)
         time.sleep(0.3)
         ReleaseKey(k_char)
