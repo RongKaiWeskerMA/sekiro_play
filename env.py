@@ -169,7 +169,7 @@ class Sekiro_Env:
         return gesture
     
     def cal_reward(self, new_state):
-        """
+        """d
         Calculate the reward based on the new state of the game.
         
         - This method is currently a placeholder and should be implemented based on the specific
@@ -190,14 +190,14 @@ class Sekiro_Env:
         boss_gesture = self.extract_boss_gesture(new_state)
 
         if self_health > 50:
-            reward += 2
+            reward += 0.1
         
         if self_gesture < 70:
             reward +=2
         
-        reward += 87 - boss_health
-        reward += boss_gesture
-
+        reward += (88 - boss_health) * 4
+        reward += boss_gesture * 6
+        reward += self.counter
         return reward
 
     def check_done(self, new_state):
@@ -245,7 +245,7 @@ class Sekiro_Env:
         done = self.check_done(cv2_img)
         self.counter += 1
         if done:
-            reward -= 100
+            reward -= 10
         print(f"step_reward is: {reward}")
 
         return cv2_img, reward, done
