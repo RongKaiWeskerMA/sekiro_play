@@ -39,11 +39,10 @@ class Sekiro_Env:
         - threshold (float): Threshold for template matching when checking if the game character is dead.
         - transform (torchvision.transforms.Compose): Transformations to be applied to the game image.
         """
-        self.action_space = None
-        self.observation_space = None
-        self.state = torch.zeros(1280, 720).cuda()
         self.game_resolution = game_resolution
         self.action_interface = action_interface()
+        self.action_space = len(self.action_interface.action_map)
+        self.observation_space = None
         self.template_path_death = cv2.imread('assets/dead.png', 0)
         self.threshold = 0.57
         self.counter = 0
@@ -74,7 +73,7 @@ class Sekiro_Env:
         if if_tensor:
             img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             img_pil = Image.fromarray(img_rgb)
-            img_tensor = self.transform(img_pil).cuda()
+            img_tensor = self.transform(img_pil)
         
         return img
 
@@ -186,12 +185,24 @@ class Sekiro_Env:
         Returns:
         - reward (float): The calculated reward (currently not implemented).
         """
+        reward = 0
+        
         self_health = self.extract_self_health(new_state)
         self_gesture = self.extract_self_gesture(new_state)
 
         boss_health = self.extract_boss_health(new_state)
         boss_gesture = self.extract_boss_gesture(new_state)
-        return 0
+
+        if self_health > 50:
+            reward += 2
+        
+        if self_gesture < 70:
+            reward +=2
+        
+        reward += 87 - boss_health
+        reward += boss_gesture
+
+        return reward
 
     def check_done(self, new_state):
         """
@@ -236,9 +247,10 @@ class Sekiro_Env:
         cv2_img = self.get_state()
         reward = self.cal_reward(cv2_img)
         done = self.check_done(cv2_img)
-        if (self.counter%5) ==0 :
-            cv2.imwrite(f'test_imgs/check_{self.counter}.png', cv2_img)
         self.counter += 1
+        if done:
+            reward -= 100
+
         return cv2_img, reward, done
 
     def reset(self):
@@ -247,7 +259,9 @@ class Sekiro_Env:
         
         - Resets the state of the action interface, preparing the environment for a new game session.
         """
+        self.counter = 0
         self.action_interface.reset_state()
+
 
 if __name__ == "__main__":
     # cv2.imshow('test_health', next_state)
@@ -269,7 +283,7 @@ if __name__ == "__main__":
             ReleaseKey(k_char)
             time.sleep(10)
             env.reset()
-            time.sleep(10)
+            time.sleep(11)
             HoldKey(l_char)
             time.sleep(0.3)
             ReleaseKey(l_char)
