@@ -260,8 +260,17 @@ class Sekiro_Env:
         - Resets the state of the action interface, preparing the environment for a new game session.
         """
         self.counter = 0
+        
+        time.sleep(4)
+        HoldKey(k_char)
+        time.sleep(0.3)
+        ReleaseKey(k_char)
+        time.sleep(10)
         self.action_interface.reset_state()
-
+        time.sleep(11)
+        HoldKey(l_char)
+        time.sleep(0.3)
+        ReleaseKey(l_char)
 
 if __name__ == "__main__":
     # cv2.imshow('test_health', next_state)
@@ -277,17 +286,8 @@ if __name__ == "__main__":
         action = model(obs)
         obs, reward, done = env.step(action)
         if done:
-            time.sleep(4)
-            HoldKey(k_char)
-            time.sleep(0.3)
-            ReleaseKey(k_char)
-            time.sleep(10)
             env.reset()
-            time.sleep(11)
-            HoldKey(l_char)
-            time.sleep(0.3)
-            ReleaseKey(l_char)
-
+        
         keys_pressed_tp = key_check()
         if 'Q' in keys_pressed_tp:
             # exit loop

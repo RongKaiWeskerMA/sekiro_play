@@ -8,6 +8,7 @@ from itertools import count
 import argparse
 from env import Sekiro_Env
 from network import DQN
+import os
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
@@ -62,7 +63,7 @@ class Trainer:
 
             for t in count():
                 action = self.select_action(state)
-                next_state, reward, done, _ = self.env.step(action.item())
+                next_state, reward, done = self.env.step(action.item())
                 episode_reward += reward
 
                 self.memory.push(state, action, next_state, reward)
@@ -70,10 +71,22 @@ class Trainer:
                 state = next_state
 
                 self.optimize_model()
-
+                # Soft update of the target network's weights
+                # θ′ ← τ θ + (1 −τ )θ′
+                target_net_state_dict = self.target_net.state_dict()
+                policy_net_state_dict = self.policy_net.state_dict()
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key] * self.args.tau + target_net_state_dict[key] * (1 - self.args.tau)
+                self.target_net.load_state_dict(target_net_state_dict)
+                
                 if done:
-                    print(f"Episode {epoch+1} finished after {t+1} steps. Total reward: {episode_reward}")
+                    self.env.reset()
+                    print(f"Episode {epoch+1} finished after {t+1} steps. Total reward: {episode_reward}")   
                     break
+                
+                if (epoch + 1) % self.args.checkpoint_interval == 0:
+                    self.save_checkpoint(epoch + 1)
+
 
         print("Training completed.")
 
@@ -93,7 +106,8 @@ class Trainer:
         state_action_values = self.policy_net(state_batch).gather(1, action_batch)
 
         next_state_values = torch.zeros(self.args.batch_size, device=self.device)
-        next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
+        with torch.no_grad():
+            next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
         
         expected_state_action_values = (next_state_values * self.args.gamma) + reward_batch
 
@@ -101,23 +115,40 @@ class Trainer:
 
         self.policy_optimizer.zero_grad()
         loss.backward()
-        for param in self.policy_net.parameters():
-            param.grad.data.clamp_(-1, 1)
+        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         self.policy_optimizer.step()
+
+    def save_checkpoint(self, epoch):
+        """Save a checkpoint of the model"""
+        checkpoint_dir = self.args.checkpoint_dir
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        
+        checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
+        torch.save({
+            'epoch': epoch,
+            'policy_net_state_dict': self.policy_net.state_dict(),
+            'target_net_state_dict': self.target_net.state_dict(),
+            'optimizer_state_dict': self.policy_optimizer.state_dict(),
+            'args': self.args
+        }, checkpoint_path)
+        print(f"Checkpoint saved to {checkpoint_path}")
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Sekiro RL Training Script")
     
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size for training")
-    parser.add_argument("--epochs", type=int, default=100, help="Number of epochs to train")
-    parser.add_argument("--cuda", action="store_true", help="Use CUDA if available")
+    parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs to train")
+    parser.add_argument("--cuda", action="store_true", default=True, help="Use CUDA if available")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor for future rewards")
     parser.add_argument("--eps_start", type=float, default=0.9, help="Starting value of epsilon for epsilon-greedy exploration")
     parser.add_argument("--eps_end", type=float, default=0.05, help="Final value of epsilon for epsilon-greedy exploration")
     parser.add_argument("--eps_decay", type=int, default=1000, help="Decay rate for epsilon in epsilon-greedy exploration")
     parser.add_argument("--tau", type=float, default=0.005, help="Update rate for target network")
+    parser.add_argument("--checkpoint_interval", type=int, default=10, help="Number of epochs between checkpoints")
+    parser.add_argument("--checkpoint_dir", type=str, default="checkpoints/", help="Directory to save checkpoints")
 
     return parser.parse_args()
 
