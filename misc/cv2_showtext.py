@@ -45,19 +45,34 @@ def click_event(event, x, y, flags, params):
 if __name__=="__main__": 
   
     # reading the image 
-    img = cv2.imread('assets/self_gesture.png')
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # img = cv2.GaussianBlur(img, (3,3), 0)
-    x_min, x_max = 523, 779
-    y_min, y_max = 636, 644
+    img = cv2.imread('assets/boss_gesture.png')
+    
+
+    x_min, x_max = 427, 869
+    y_min, y_max = 32, 38
     screen_roi = img[y_min:y_max, x_min:x_max]
-    # screen_roi = screen_roi[...,2]
-    sns.heatmap(screen_roi)
-    plt.show()
-    cond1 = np.where(screen_roi[4] > 80, True, False)
-    cond2 = np.where(screen_roi[4] < 120, True, False)
-    health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
+    hsv = cv2.cvtColor(screen_roi, cv2.COLOR_BGR2HSV) 
+    lower = np.array([22, 93, 0])
+    upper = np.array([45, 255, 255])
+    mask = cv2.inRange(hsv, lower, upper) 
+    cv2.imshow("Mask", mask) 
+    cond = np.where(mask[4] > 0, True, False)
+    health = cond.sum() / screen_roi.shape[1]
     health *= 100
+    
+    
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # # img = cv2.GaussianBlur(img, (3,3), 0)
+    # x_min, x_max = 523, 779
+    # y_min, y_max = 636, 644
+    # screen_roi = img[y_min:y_max, x_min:x_max]
+    # # screen_roi = screen_roi[...,2]
+    # sns.heatmap(screen_roi)
+    # plt.show()
+    # cond1 = np.where(screen_roi[4] > 80, True, False)
+    # cond2 = np.where(screen_roi[4] < 120, True, False)
+    # health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
+    # health *= 100
     cv2.imshow('test', screen_roi)
     cv2.waitKey(0)
     # displaying the image 

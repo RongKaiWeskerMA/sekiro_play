@@ -47,7 +47,7 @@ class Sekiro_Env:
         self.template_path_death = cv2.imread('assets/dead.png', 0)
         self.threshold = 0.57
         self.counter = 0
-        self.use_color_gesture = False
+        self.use_color_gesture = True
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
@@ -119,14 +119,29 @@ class Sekiro_Env:
     
 
     def extract_self_gesture(self, next_state):
-        img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
-        x_min, x_max = 523, 779
-        y_min, y_max = 636, 644
-        screen_roi = img[y_min:y_max, x_min:x_max]
-        cond1 = np.where(screen_roi[4] > 80, True, False)
-        cond2 = np.where(screen_roi[4] < 120, True, False)
-        gesture = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
-        gesture *= 100
+        if self.use_color_gesture:
+            img = next_state
+            x_min, x_max = 523, 779
+            y_min, y_max = 636, 644
+            screen_roi = img[y_min:y_max, x_min:x_max]
+            hsv = cv2.cvtColor(screen_roi, cv2.COLOR_BGR2HSV) 
+            lower = np.array([22, 93, 0])
+            upper = np.array([45, 255, 255])
+            mask = cv2.inRange(hsv, lower, upper) 
+            cond = np.where(mask[4] > 0, True, False)
+            gesture = cond.sum() / screen_roi.shape[1]
+            gesture *= 100
+        
+        
+        else:
+            img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
+            x_min, x_max = 523, 779
+            y_min, y_max = 636, 644
+            screen_roi = img[y_min:y_max, x_min:x_max]
+            cond1 = np.where(screen_roi[4] > 80, True, False)
+            cond2 = np.where(screen_roi[4] < 120, True, False)
+            gesture = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
+            gesture *= 100
         print(f"Sekiro_gesture is: {gesture}")
         return gesture
 
@@ -141,7 +156,9 @@ class Sekiro_Env:
             lower = np.array([22, 93, 0])
             upper = np.array([45, 255, 255])
             mask = cv2.inRange(hsv, lower, upper) 
-            cv2.imshow("Mask", mask) 
+            cond = np.where(mask[4] > 0, True, False)
+            gesture = cond.sum() / screen_roi.shape[1]
+            gesture *= 100
         else:
             img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
             x_min, x_max = 427, 869
@@ -173,7 +190,7 @@ class Sekiro_Env:
         self_gesture = self.extract_self_gesture(new_state)
 
         boss_health = self.extract_boss_health(new_state)
-
+        boss_gesture = self.extract_boss_gesture(new_state)
         return 0
 
     def check_done(self, new_state):
