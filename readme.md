@@ -103,7 +103,7 @@ Contributions to this project are welcome! Please follow these steps:
 
 ## License
 
-[Specify your license here, e.g., MIT License]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
