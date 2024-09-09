@@ -20,45 +20,49 @@ class Sekiro_Env:
     A class to represent the game environment for Sekiro.
     This class handles the interaction with the game, including capturing the game state,
     performing actions, and checking game conditions.
+
+    Attributes:
+        game_resolution (tuple): The resolution of the game window (width, height).
+        action_interface (ActionInterface): Interface to map actions to game inputs.
+        action_space (int): The number of possible actions in the game.
+        observation_space (None): Placeholder for the observation space, not currently used.
+        template_path_death (numpy.ndarray): Template image for detecting the death screen.
+        threshold (float): Threshold for template matching when checking if the game character is dead.
+        counter (int): Counter to keep track of the number of steps taken.
+        use_color_gesture (bool): Flag to determine whether to use color-based gesture detection.
+        dead_counter (int): Counter to keep track of consecutive frames where the character appears dead.
+        hwin_sekiro (int): Handle to the Sekiro game window.
+        boss_health_prev (float): Previous health value of the boss, used for reward calculation.
     """
 
     def __init__(self, game_resolution=(1280, 720)):
         """
         Initialize the Sekiro_Env class.
         
-        Parameters:
-        - game_resolution (tuple): The resolution of the game window (width, height).
-        
-        Attributes:
-        - action_space (None): Placeholder for the action space, to be defined based on the game.
-        - observation_space (None): Placeholder for the observation space, to be defined based on the game.
-        - state (torch.Tensor): The initial state of the game as a torch tensor.
-        - game_resolution (tuple): Stores the resolution of the game window.
-        - action_interface (ActionInterface): Interface to map actions to game inputs.
-        - template_path_death (numpy.ndarray): Template image for detecting the death screen.
-        - threshold (float): Threshold for template matching when checking if the game character is dead.
-        - transform (torchvision.transforms.Compose): Transformations to be applied to the game image.
+        Args:
+            game_resolution (tuple): The resolution of the game window (width, height).
         """
         self.game_resolution = game_resolution
         self.action_interface = action_interface()
         self.action_space = len(self.action_interface.action_map)
         self.observation_space = None
         self.template_path_death = cv2.imread('assets/death_crop.png', 0)
-        self.threshold = 0.57
+        self.threshold = 0.55
         self.counter = 0
         self.use_color_gesture = True
         self.dead_counter = 0
         self.hwin_sekiro = win32gui.FindWindow(None, 'Sekiro')
+        self.boss_health_prev = 86
     
     def get_state(self, if_tensor=False):
         """
         Capture the current state of the game window.
 
-        - Grabs the current game window using the Sekiro window handle.
-        - Returns the raw image data without any processing.
+        Args:
+            if_tensor (bool): Flag to determine if the output should be a tensor (not used in current implementation).
 
         Returns:
-        - img (numpy.ndarray): The captured image of the game window in BGR format.
+            numpy.ndarray: The captured image of the game window in BGR format.
         """
         
         
@@ -70,18 +74,23 @@ class Sekiro_Env:
         """
         Execute the given action in the game.
         
-        - Maps the action to a corresponding game input using the action interface.
-        - Prints the message corresponding to the action.
-        - Executes the action.
-        
-        Parameters:
-        - action (int): The action to be taken, as an integer index.
+        Args:
+            action (int): The action to be taken, as an integer index.
         """
         message, action_func = self.action_interface.action_map.get(action)
         print(f"{message}")
         action_func()
 
     def extract_self_health(self, next_state):
+        """
+        Extract the player's health from the game state image.
+
+        Args:
+            next_state (numpy.ndarray): The current game state image.
+
+        Returns:
+            float: The extracted health value as a percentage.
+        """
         img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
         x_min, x_max = 59, 494
         y_min, y_max = 666, 674
@@ -99,6 +108,15 @@ class Sekiro_Env:
         return health
     
     def extract_boss_health(self, next_state):
+        """
+        Extract the boss's health from the game state image.
+
+        Args:
+            next_state (numpy.ndarray): The current game state image.
+
+        Returns:
+            float: The extracted boss health value as a percentage.
+        """
         img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
         x_min, x_max = 67, 349
         y_min, y_max = 53, 61
@@ -112,6 +130,15 @@ class Sekiro_Env:
     
 
     def extract_self_gesture(self, next_state):
+        """
+        Extract the player's gesture meter from the game state image.
+
+        Args:
+            next_state (numpy.ndarray): The current game state image.
+
+        Returns:
+            float: The extracted gesture meter value as a percentage.
+        """
         if self.use_color_gesture:
             img = next_state
             x_min, x_max = 523, 779
@@ -140,6 +167,15 @@ class Sekiro_Env:
 
 
     def extract_boss_gesture(self, next_state):
+        """
+        Extract the boss's gesture meter from the game state image.
+
+        Args:
+            next_state (numpy.ndarray): The current game state image.
+
+        Returns:
+            float: The extracted boss gesture meter value as a percentage.
+        """
         if self.use_color_gesture:
             img = next_state
             x_min, x_max = 427, 869
@@ -167,17 +203,15 @@ class Sekiro_Env:
         return gesture
     
     def cal_reward(self, new_state, action):
-        """d
-        Calculate the reward based on the new state of the game.
-        
-        - This method is currently a placeholder and should be implemented based on the specific
-          game logic for reward calculation.
-        
-        Parameters:
-        - new_state (torch.Tensor): The new state of the game after taking an action.
-        
+        """
+        Calculate the reward based on the new state of the game and the action taken.
+
+        Args:
+            new_state (numpy.ndarray): The new state of the game after taking an action.
+            action (int): The action that was taken.
+
         Returns:
-        - reward (float): The calculated reward (currently not implemented).
+            float: The calculated reward.
         """
         reward = 0
         
@@ -190,30 +224,30 @@ class Sekiro_Env:
         if self_health > 50:
             reward += 0.1
         
-        if self_gesture < 70:
-            reward += 0.2
+        # if self_gesture < 70:
+        #     reward += 0.2
         
-        reward += (86 - boss_health) * 4
-        reward += boss_gesture * 6
+        reward += (self.boss_health_prev - boss_health) * 6
+        self.boss_health_prev = boss_health 
+        reward += boss_gesture * 15
         
         
         # prevent sekiro to take stupid action
         if self_health > 80 and action == 9:
-            reward -= 5
+            reward -= 10
+        if self.counter < 3 and action == 9:
+            reward -= 10
         return reward
 
     def check_done(self, new_state):
         """
         Check if the game has reached a terminal state (e.g., the player character is dead).
-        
-        - Converts the new state to grayscale.
-        - Uses template matching to detect if the death screen is visible.
-        
-        Parameters:
-        - new_state (numpy.ndarray): The new game state as a RGB image.
-        
+
+        Args:
+            new_state (numpy.ndarray): The new game state as a RGB image.
+
         Returns:
-        - done (bool): True if the game is over, False otherwise.
+            bool: True if the game is over, False otherwise.
         """
         x_min, x_max = 533, 776
         y_min, y_max = 222, 425
@@ -237,19 +271,15 @@ class Sekiro_Env:
     def step(self, action):
         """
         Perform a step in the environment by taking an action and observing the result.
-        
-        - Takes the specified action.
-        - Captures the new state of the game.
-        - Calculates the reward for the new state.
-        - Checks if the game is over.
-        
-        Parameters:
-        - action (int): The action to be performed.
-        
+
+        Args:
+            action (int): The action to be performed.
+
         Returns:
-        - new_state (torch.Tensor): The new state of the game.
-        - reward (float): The reward obtained from the new state (currently not implemented).
-        - done (bool): Whether the game has reached a terminal state.
+            tuple: Containing:
+                - numpy.ndarray: The new state of the game.
+                - float: The reward obtained from the new state.
+                - bool: Whether the game has reached a terminal state.
         """
         self.take_action(action)
         cv2_img = self.get_state()
@@ -257,7 +287,7 @@ class Sekiro_Env:
         done = self.check_done(cv2_img)
         self.counter += 1
         if done:
-            reward -= 10
+            reward -= 5
         print(f"step_reward is: {reward}")
         print(f"step_counter is: {self.counter}")
         print("")
@@ -267,8 +297,9 @@ class Sekiro_Env:
     def reset(self):
         """
         Reset the game environment to its initial state.
-        
-        - Resets the state of the action interface, preparing the environment for a new game session.
+
+        This method resets various counters, waits for the game to reload,
+        and performs necessary actions to start a new game session.
         """
         self.counter = 0
         self.dead_counter = 0
@@ -284,6 +315,12 @@ class Sekiro_Env:
         ReleaseKey(l_char)
 
 if __name__ == "__main__":
+    """
+    Main entry point for testing the Sekiro_Env class.
+
+    This section contains commented-out code for running a simple random agent
+    in the Sekiro environment and capturing screenshots.
+    """
     # cv2.imshow('test_health', next_state)
     # cv2.waitKey(0)
     def model(state):

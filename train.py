@@ -14,24 +14,81 @@ from torchvision import transforms
 import glob
 import win32gui
 
+# Named tuple for storing experience tuples
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
 class ReplayBuffer:
+    """
+    A circular buffer to store and sample experiences for experience replay.
+    
+    Attributes:
+        buffer (deque): A double-ended queue to store transitions.
+    """
+
     def __init__(self, capacity):
+        """
+        Initialize the ReplayBuffer with a fixed capacity.
+        
+        Args:
+            capacity (int): Maximum number of transitions to store.
+        """
         self.buffer = deque([], maxlen=capacity)
 
     def push(self, *args):
-        """Save a transition"""
+        """
+        Save a transition to the buffer.
+        
+        Args:
+            *args: Components of a transition (state, action, next_state, reward).
+        """
         self.buffer.append(Transition(*args))
 
     def sample(self, batch_size):
+        """
+        Randomly sample a batch of transitions from the buffer.
+        
+        Args:
+            batch_size (int): Number of transitions to sample.
+        
+        Returns:
+            list: A batch of randomly sampled transitions.
+        """
         return random.sample(self.buffer, batch_size)
 
     def __len__(self):
+        """
+        Get the current size of the buffer.
+        
+        Returns:
+            int: Current number of transitions in the buffer.
+        """
         return len(self.buffer)
 
 class Trainer:
+    """
+    Main class for training the DQN agent in the Sekiro environment.
+    
+    Attributes:
+        args (argparse.Namespace): Command-line arguments.
+        device (torch.device): Device to run the model on (CPU or CUDA).
+        env (Sekiro_Env): The Sekiro game environment.
+        action_space (int): Number of possible actions.
+        policy_net (DQN): The main DQN model.
+        target_net (DQN): The target network for stable Q-learning.
+        policy_optimizer (torch.optim.Optimizer): Optimizer for the policy network.
+        memory (ReplayBuffer): Experience replay buffer.
+        steps_done (int): Total number of steps taken in the environment.
+        transform (torchvision.transforms.Compose): Image transformations for preprocessing.
+        start_epoch (int): Starting epoch number (used for resuming training).
+    """
+
     def __init__(self, args):
+        """
+        Initialize the Trainer with given arguments.
+        
+        Args:
+            args (argparse.Namespace): Command-line arguments.
+        """
         self.args = args
         self.device = torch.device("cuda" if args.cuda and torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -51,6 +108,7 @@ class Trainer:
 
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
+            # transforms.CenterCrop(224),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         
@@ -59,9 +117,18 @@ class Trainer:
             self.load_checkpoint()
 
     def transform_state(self, state):
+        """
+        Preprocess the state image for input to the neural network.
+        
+        Args:
+            state (numpy.ndarray): Raw state image from the environment.
+        
+        Returns:
+            torch.Tensor: Preprocessed state tensor.
+        """
         # convert opencv state to torch tensor
         state = cv2.cvtColor(state, cv2.COLOR_BGR2RGB)
-        state_transpose = state.transpose((2, 0, 1))
+        state_transpose = state.transpose((2, 0, 1)) / 255
         state_tensor = torch.tensor(state_transpose, dtype=torch.float32)
         state_tensor = self.transform(state_tensor)
         state_tensor = state_tensor.to(self.device)
@@ -70,6 +137,15 @@ class Trainer:
 
 
     def select_action(self, state):
+        """
+        Select an action using an epsilon-greedy policy.
+        
+        Args:
+            state (torch.Tensor): Current state tensor.
+        
+        Returns:
+            torch.Tensor: Selected action.
+        """
         sample = random.random()
         eps_threshold = self.args.eps_end + (self.args.eps_start - self.args.eps_end) * \
             np.exp(-1. * self.steps_done / self.args.eps_decay)
@@ -81,6 +157,12 @@ class Trainer:
             return torch.tensor([[random.randint(0, self.action_space-1)]], device=self.device, dtype=torch.long)
 
     def train(self):
+        """
+        Main training loop for the DQN agent.
+        
+        This method runs the training process for the specified number of epochs,
+        collecting experiences, optimizing the model, and periodically saving checkpoints.
+        """
         win32gui.SetForegroundWindow(self.env.hwin_sekiro)
         for epoch in range(self.start_epoch, self.args.epochs):
             state = self.env.get_state()
@@ -122,6 +204,12 @@ class Trainer:
         print("Training completed.")
 
     def optimize_model(self):
+        """
+        Perform one step of optimization to train the model.
+        
+        This method samples a batch from the replay buffer, computes the loss,
+        and updates the policy network's parameters.
+        """
         if len(self.memory) < self.args.batch_size:
             return
         transitions = self.memory.sample(self.args.batch_size)
@@ -150,12 +238,17 @@ class Trainer:
         self.policy_optimizer.step()
 
     def save_checkpoint(self, epoch):
-        """Save a checkpoint of the model"""
+        """
+        Save a checkpoint of the current model state.
+        
+        Args:
+            epoch (int): Current epoch number.
+        """
         checkpoint_dir = self.args.checkpoint_dir
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         
-        checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
+        checkpoint_path = os.path.join(checkpoint_dir, f"resnet_checkpoint_epoch_{epoch}.pth")
         torch.save({
             'epoch': epoch,
             'policy_net_state_dict': self.policy_net.state_dict(),
@@ -167,7 +260,12 @@ class Trainer:
 
 
     def load_checkpoint(self):
-        """Load the latest checkpoint"""
+        """
+        Load the latest checkpoint to resume training.
+        
+        This method searches for the most recent checkpoint file and loads
+        the model state, optimizer state, and training progress.
+        """
         checkpoint_dir = self.args.checkpoint_dir
         checkpoints = glob.glob(os.path.join(checkpoint_dir, "checkpoint_epoch_*.pth"))
         
@@ -192,6 +290,12 @@ class Trainer:
 
 
 def parse_args():
+    """
+    Parse command-line arguments for the training script.
+    
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="Sekiro RL Training Script")
     
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
@@ -210,6 +314,12 @@ def parse_args():
     return parser.parse_args()
 
 if __name__ == "__main__":
+    """
+    Main entry point of the script.
+    
+    This section parses arguments, sets random seeds for reproducibility,
+    initializes the Trainer, and starts the training process.
+    """
     args = parse_args()
     
     random.seed(args.seed)

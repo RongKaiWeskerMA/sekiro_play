@@ -108,7 +108,7 @@ class action_interface:
         """
         HoldKey(w_char)
         HoldKey(shift_char)
-        time.sleep(1)
+        time.sleep(0.7)
         ReleaseKey(w_char)
         ReleaseKey(shift_char)
 
