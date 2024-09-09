@@ -222,14 +222,14 @@ class Sekiro_Env:
         boss_gesture = self.extract_boss_gesture(new_state)
 
         if self_health > 50:
-            reward += 0.1
+            reward += 0.2
         
         # if self_gesture < 70:
         #     reward += 0.2
         
-        reward += (self.boss_health_prev - boss_health) * 6
+        reward += 86+ self.boss_health_prev - 2 * boss_health 
         self.boss_health_prev = boss_health 
-        reward += boss_gesture * 15
+        reward += boss_gesture 
         
         
         # prevent sekiro to take stupid action
@@ -287,7 +287,7 @@ class Sekiro_Env:
         done = self.check_done(cv2_img)
         self.counter += 1
         if done:
-            reward -= 5
+            reward -= 2
         print(f"step_reward is: {reward}")
         print(f"step_counter is: {self.counter}")
         print("")
@@ -303,7 +303,7 @@ class Sekiro_Env:
         """
         self.counter = 0
         self.dead_counter = 0
-        time.sleep(7)
+        time.sleep(6)
         HoldKey(k_char)
         time.sleep(0.3)
         ReleaseKey(k_char)

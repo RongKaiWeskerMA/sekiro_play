@@ -248,7 +248,7 @@ class Trainer:
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         
-        checkpoint_path = os.path.join(checkpoint_dir, f"resnet_checkpoint_epoch_{epoch}.pth")
+        checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
         torch.save({
             'epoch': epoch,
             'policy_net_state_dict': self.policy_net.state_dict(),

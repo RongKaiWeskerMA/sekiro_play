@@ -1,3 +1,5 @@
+![top.jpg](assets/top.jpg)
+
 # Sekiro Reinforcement Learning Agent
 
 ## Table of Contents
