@@ -43,33 +43,26 @@ class Sekiro_Env:
         self.action_interface = action_interface()
         self.action_space = len(self.action_interface.action_map)
         self.observation_space = None
-        self.template_path_death = cv2.imread('assets/dead.png', 0)
-        self.threshold = 0.65
+        self.template_path_death = cv2.imread('assets/death_crop.png', 0)
+        self.threshold = 0.57
         self.counter = 0
         self.use_color_gesture = True
         self.dead_counter = 0
+        self.hwin_sekiro = win32gui.FindWindow(None, 'Sekiro')
     
     def get_state(self, if_tensor=False):
         """
         Capture the current state of the game window.
-        
-        - Grabs the current game window and converts the image to a format suitable for processing.
-        - Converts the captured image from BGR to RGB.
-        - Applies transformations to the image for further use with PyTorch models.
-        
+
+        - Grabs the current game window using the Sekiro window handle.
+        - Returns the raw image data without any processing.
+
         Returns:
-        - img_tensor (torch.Tensor): The transformed image tensor.
-        - img_rgb (numpy.ndarray): The original captured image in RGB format.
+        - img (numpy.ndarray): The captured image of the game window in BGR format.
         """
-        hwin_sekiro = win32gui.FindWindow(None, 'Sekiro')
-        win32gui.SetForegroundWindow(hwin_sekiro)
-        img = grab_window(hwin_sekiro, game_resolution=self.game_resolution, SHOW_IMAGE=False)
         
-        # not sure if we need torch tensor at this stage
-        if if_tensor:
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img_pil = Image.fromarray(img_rgb)
-            img_tensor = self.transform(img_pil)
+        
+        img = grab_window(self.hwin_sekiro, game_resolution=self.game_resolution, SHOW_IMAGE=False)
         
         return img
 
@@ -97,10 +90,10 @@ class Sekiro_Env:
         cond2 = np.where(screen_roi[4] < 90, True, False)
         health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
         health *= 100
-        if health < 1:
-            self.dead_counter += 1
-        else:
-            self.dead_counter = 0
+        # if health < 1:
+        #     self.dead_counter += 1
+        # else:
+        #     self.dead_counter = 0
 
         print(f"Sekrio_health is {health}")
         return health
@@ -173,7 +166,7 @@ class Sekiro_Env:
         print(f"boss_gesture is: {gesture}")
         return gesture
     
-    def cal_reward(self, new_state):
+    def cal_reward(self, new_state, action):
         """d
         Calculate the reward based on the new state of the game.
         
@@ -202,7 +195,11 @@ class Sekiro_Env:
         
         reward += (86 - boss_health) * 4
         reward += boss_gesture * 6
-        reward += self.counter *0.5
+        
+        
+        # prevent sekiro to take stupid action
+        if self_health > 80 and action == 9:
+            reward -= 5
         return reward
 
     def check_done(self, new_state):
@@ -218,20 +215,24 @@ class Sekiro_Env:
         Returns:
         - done (bool): True if the game is over, False otherwise.
         """
-        # gray_state = cv2.cvtColor(new_state, cv2.COLOR_BGR2GRAY)
-        # res = cv2.matchTemplate(gray_state, self.template_path_death, cv2.TM_CCOEFF_NORMED)
+        x_min, x_max = 533, 776
+        y_min, y_max = 222, 425
+        new_state = new_state[y_min:y_max, x_min:x_max]
+        gray_state = cv2.cvtColor(new_state, cv2.COLOR_BGR2GRAY)
+        res = cv2.matchTemplate(gray_state, self.template_path_death, cv2.TM_CCOEFF_NORMED)
 
-        # if np.max(res) >= self.threshold:
-        #     print("Sekiro is dead")
-        #     return True
-        # else:
-        #     return False
-        if self.dead_counter >= 1:
+        if np.max(res) >= self.threshold:
+            self.dead_counter += 1
             print("Sekiro is dead")
             return True
-             
         else:
-            return False    
+            return False
+        # if self.dead_counter >= 1:
+        #     print("Sekiro is dead")
+        #     return True
+             
+        # else:
+        #     return False    
 
     def step(self, action):
         """
@@ -252,12 +253,13 @@ class Sekiro_Env:
         """
         self.take_action(action)
         cv2_img = self.get_state()
-        reward = self.cal_reward(cv2_img)
+        reward = self.cal_reward(cv2_img, action)
         done = self.check_done(cv2_img)
         self.counter += 1
         if done:
             reward -= 10
         print(f"step_reward is: {reward}")
+        print(f"step_counter is: {self.counter}")
         print("")
 
         return cv2_img, reward, done
@@ -270,7 +272,7 @@ class Sekiro_Env:
         """
         self.counter = 0
         self.dead_counter = 0
-        time.sleep(6)
+        time.sleep(7)
         HoldKey(k_char)
         time.sleep(0.3)
         ReleaseKey(k_char)
@@ -288,20 +290,23 @@ if __name__ == "__main__":
         action = random.randint(0, 9)
         return action
 
-    env = Sekiro_Env()
-    obs = env.get_state()
+    # env = Sekiro_Env()
+    # for i in range(10000000000):
+    #     img = env.get_state()
+    #     cv2.imwrite(f"test_imgs/test_{i}.png", img)
+    # obs = env.get_state()
     
-    while True:
-        action = model(obs)
-        obs, reward, done = env.step(action)
-        if done:
-            env.reset()
+    # while True:
+    #     action = model(obs)
+    #     obs, reward, done = env.step(action)
+    #     if done:
+    #         env.reset()
         
-        keys_pressed_tp = key_check()
-        if 'Q' in keys_pressed_tp:
-            # exit loop
-            print('exiting...')
+    #     keys_pressed_tp = key_check()
+    #     if 'Q' in keys_pressed_tp:
+    #         # exit loop
+    #         print('exiting...')
             
-            break
+    #         break
 
 

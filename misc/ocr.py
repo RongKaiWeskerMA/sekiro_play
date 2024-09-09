@@ -5,9 +5,9 @@ import pytesseract as tess
 
 
 
-image = cv2.imread("test_imgs/check_115.png")
+image = cv2.imread("assets/death_eng.png")
 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-text = tess.image_to_string(image_rgb, lang="chi_sim")
+text = tess.image_to_string(image_rgb)
 print(text)
 h, w, c = image.shape
 boxes = tess.image_to_boxes(image)

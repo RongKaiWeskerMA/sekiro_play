@@ -19,7 +19,7 @@ def click_event(event, x, y, flags, params):
         font = cv2.FONT_HERSHEY_SIMPLEX 
         cv2.putText(img, str(x) + ',' +
                     str(y), (x,y), font, 
-                    1, (255, 0, 0), 2) 
+                    0.3, (255, 0, 0), 2) 
         cv2.imshow('image', img) 
   
     # checking for right mouse clicks      
@@ -45,20 +45,21 @@ def click_event(event, x, y, flags, params):
 if __name__=="__main__": 
   
     # reading the image 
-    img = cv2.imread('assets/boss_gesture.png')
+    img = cv2.imread('assets/death.png')
     
 
-    x_min, x_max = 427, 869
-    y_min, y_max = 32, 38
+    x_min, x_max = 533, 776
+    y_min, y_max = 222, 425
     screen_roi = img[y_min:y_max, x_min:x_max]
-    hsv = cv2.cvtColor(screen_roi, cv2.COLOR_BGR2HSV) 
-    lower = np.array([22, 93, 0])
-    upper = np.array([45, 255, 255])
-    mask = cv2.inRange(hsv, lower, upper) 
-    cv2.imshow("Mask", mask) 
-    cond = np.where(mask[4] > 0, True, False)
-    health = cond.sum() / screen_roi.shape[1]
-    health *= 100
+    cv2.imwrite("assets/death_crop.png", screen_roi)
+    # hsv = cv2.cvtColor(screen_roi, cv2.COLOR_BGR2HSV) 
+    # lower = np.array([22, 93, 0])
+    # upper = np.array([45, 255, 255])
+    # mask = cv2.inRange(hsv, lower, upper) 
+    # cv2.imshow("Mask", mask) 
+    # cond = np.where(mask[4] > 0, True, False)
+    # health = cond.sum() / screen_roi.shape[1]
+    # health *= 100
     
     
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -76,14 +77,14 @@ if __name__=="__main__":
     cv2.imshow('test', screen_roi)
     cv2.waitKey(0)
     # displaying the image 
-    cv2.imshow('image', img) 
+    # cv2.imshow('image', img) 
   
-    # setting mouse handler for the image 
-    # and calling the click_event() function 
-    cv2.setMouseCallback('image', click_event) 
+    # # setting mouse handler for the image 
+    # # and calling the click_event() function 
+    # cv2.setMouseCallback('image', click_event) 
   
-    # wait for a key to be pressed to exit 
-    cv2.waitKey(0) 
+    # # wait for a key to be pressed to exit 
+    # cv2.waitKey(0) 
   
-    # close the window 
-    cv2.destroyAllWindows() 
+    # # close the window 
+    # cv2.destroyAllWindows() 

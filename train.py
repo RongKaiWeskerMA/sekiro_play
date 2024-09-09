@@ -12,6 +12,7 @@ import os
 import cv2
 from torchvision import transforms
 import glob
+import win32gui
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
@@ -80,6 +81,7 @@ class Trainer:
             return torch.tensor([[random.randint(0, self.action_space-1)]], device=self.device, dtype=torch.long)
 
     def train(self):
+        win32gui.SetForegroundWindow(self.env.hwin_sekiro)
         for epoch in range(self.start_epoch, self.args.epochs):
             state = self.env.get_state()
             episode_reward = 0
