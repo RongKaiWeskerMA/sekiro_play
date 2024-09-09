@@ -47,7 +47,7 @@ class Sekiro_Env:
         self.threshold = 0.65
         self.counter = 0
         self.use_color_gesture = True
-        
+        self.dead_counter = 0
     
     def get_state(self, if_tensor=False):
         """
@@ -90,13 +90,18 @@ class Sekiro_Env:
 
     def extract_self_health(self, next_state):
         img = cv2.cvtColor(next_state, cv2.COLOR_BGR2GRAY)
-        x_min, x_max = 66, 494
+        x_min, x_max = 59, 494
         y_min, y_max = 666, 674
         screen_roi = img[y_min:y_max, x_min:x_max]
         cond1 = np.where(screen_roi[4] > 60, True, False)
         cond2 = np.where(screen_roi[4] < 90, True, False)
         health = np.logical_and(cond1, cond2).sum() / screen_roi.shape[1]
         health *= 100
+        if health < 1:
+            self.dead_counter += 1
+        else:
+            self.dead_counter = 0
+
         print(f"Sekrio_health is {health}")
         return health
     
@@ -213,14 +218,20 @@ class Sekiro_Env:
         Returns:
         - done (bool): True if the game is over, False otherwise.
         """
-        gray_state = cv2.cvtColor(new_state, cv2.COLOR_BGR2GRAY)
-        res = cv2.matchTemplate(gray_state, self.template_path_death, cv2.TM_CCOEFF_NORMED)
+        # gray_state = cv2.cvtColor(new_state, cv2.COLOR_BGR2GRAY)
+        # res = cv2.matchTemplate(gray_state, self.template_path_death, cv2.TM_CCOEFF_NORMED)
 
-        if np.max(res) >= self.threshold:
+        # if np.max(res) >= self.threshold:
+        #     print("Sekiro is dead")
+        #     return True
+        # else:
+        #     return False
+        if self.dead_counter >= 1:
             print("Sekiro is dead")
             return True
+             
         else:
-            return False
+            return False    
 
     def step(self, action):
         """
@@ -247,6 +258,7 @@ class Sekiro_Env:
         if done:
             reward -= 10
         print(f"step_reward is: {reward}")
+        print("")
 
         return cv2_img, reward, done
 
@@ -257,8 +269,8 @@ class Sekiro_Env:
         - Resets the state of the action interface, preparing the environment for a new game session.
         """
         self.counter = 0
-        
-        time.sleep(5)
+        self.dead_counter = 0
+        time.sleep(6)
         HoldKey(k_char)
         time.sleep(0.3)
         ReleaseKey(k_char)

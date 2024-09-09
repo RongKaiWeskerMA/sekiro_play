@@ -11,6 +11,7 @@ from network import DQN
 import os
 import cv2
 from torchvision import transforms
+import glob
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
@@ -51,6 +52,10 @@ class Trainer:
             transforms.Resize((224, 224)),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
+        
+        self.start_epoch = 0
+        if args.resume:
+            self.load_checkpoint()
 
     def transform_state(self, state):
         # convert opencv state to torch tensor
@@ -75,7 +80,7 @@ class Trainer:
             return torch.tensor([[random.randint(0, self.action_space-1)]], device=self.device, dtype=torch.long)
 
     def train(self):
-        for epoch in range(self.args.epochs):
+        for epoch in range(self.start_epoch, self.args.epochs):
             state = self.env.get_state()
             episode_reward = 0
             state = self.transform_state(state)
@@ -108,8 +113,8 @@ class Trainer:
                     print(f"Episode {epoch+1} finished after {t+1} steps. Total reward: {episode_reward}")   
                     break
                 
-                if (epoch + 1) % self.args.checkpoint_interval == 0:
-                    self.save_checkpoint(epoch + 1)
+            if (epoch + 1) % self.args.checkpoint_interval == 0:
+                self.save_checkpoint(epoch + 1)
 
 
         print("Training completed.")
@@ -158,6 +163,32 @@ class Trainer:
         }, checkpoint_path)
         print(f"Checkpoint saved to {checkpoint_path}")
 
+
+    def load_checkpoint(self):
+        """Load the latest checkpoint"""
+        checkpoint_dir = self.args.checkpoint_dir
+        checkpoints = glob.glob(os.path.join(checkpoint_dir, "checkpoint_epoch_*.pth"))
+        
+        if not checkpoints:
+            print("No checkpoints found. Starting from scratch.")
+            return
+
+        latest_checkpoint = max(checkpoints, key=os.path.getctime)
+        print(f"Loading checkpoint: {latest_checkpoint}")
+
+        checkpoint = torch.load(latest_checkpoint, map_location=self.device)
+        
+        self.start_epoch = checkpoint['epoch']
+        self.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
+        self.target_net.load_state_dict(checkpoint['target_net_state_dict'])
+        self.policy_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        
+        # Optionally, you can load and set the args from the checkpoint
+        # self.args = checkpoint['args']
+        
+        print(f"Checkpoint loaded. Resuming from epoch {self.start_epoch}")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Sekiro RL Training Script")
     
@@ -173,7 +204,7 @@ def parse_args():
     parser.add_argument("--tau", type=float, default=0.005, help="Update rate for target network")
     parser.add_argument("--checkpoint_interval", type=int, default=10, help="Number of epochs between checkpoints")
     parser.add_argument("--checkpoint_dir", type=str, default="checkpoints/", help="Directory to save checkpoints")
-
+    parser.add_argument("--resume", action="store_true", help="Resume training from the latest checkpoint")
     return parser.parse_args()
 
 if __name__ == "__main__":
