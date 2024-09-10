@@ -57,6 +57,12 @@ python train.py --lr 0.0001 --batch_size 128 --epochs 500 --cuda
 Run `python train.py --help` to see all available options.
 
 ## Training Process
+**Prerequisites**:
+- **Data Collection**: Ensure you have collected and preprocessed data from Sekiro: Shadows Die Twice.
+- **Label File**: Use the `label.csv` file to map actions to specific frames.
+- **Config File**: Use the `sekiro_config.json` file to set the training parameters.
+- **Image Folder**: Ensure the `images` folder is in the correct path.
+- **Game Resolution**: Ensure you set the desired game resolution in the `sekiro_config.json` file. (In this repository, the resolution is set to 1280x720)
 
 The training process involves the following steps:
 
