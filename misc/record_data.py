@@ -27,13 +27,13 @@ class DataRecorder:
         self.frame_size = self.config.get('frame_size', (1920, 1080))
         self.video_record_fps = self.config.get('video_record_fps', 30)
         self.time_format = self.config.get('time_format')
-        self.counter = len(os.listdir(f".\\data\\{self.game_title}\\{self.train_or_test}\\{self.session_name}\\images")) \
-            if os.path.exists(f".\\data\\{self.game_title}\\{self.train_or_test}\\{self.session_name}\\images") else 0
+        self.counter = len(os.listdir(f"./data/{self.game_title}/{self.train_or_test}/{self.session_name}/images")) \
+            if os.path.exists(f"./data/{self.game_title}/{self.train_or_test}/{self.session_name}/images") else 0
         self.max_frames = self.config["max_frames"]
         self.myScreen = grab_window(self.config.get('region', (0, 0, 1920, 1080)))
         # Virtual key codes for special keys
-        self.space_key  = 0x20
-        self.shift_key  = 0x10
+        self.space_key  = 0x39
+        self.shift_key  = 0x2A
         self.r_key      = 0x13
         self.k_key      = 0x25
         self.j_key      = 0x24
@@ -44,9 +44,9 @@ class DataRecorder:
         # create output dataframe
         self.columns = ['frame_name', 'record_time',
                    'space', 'shift', 'r', 'k', 'j', 'w', 'a', 's', 'd']
-        self.df = pd.read_csv(f".\\data\\{self.game_title}\\{self.session_name}\\{self.train_or_test}\\label.csv") if os.path.exists(
-                    f".\\data\\{self.game_title}\\{self.session_name}\\{self.train_or_test}\\label.csv") else pd.DataFrame(columns=self.columns)
-        self.save_path = os.getcwd() + f"\\data\\{self.game_title}\\{self.train_or_test}\\{self.session_name}"
+        self.df = pd.read_csv(f"./data/{self.game_title}/{self.session_name}/{self.train_or_test}/label.csv") if os.path.exists(
+                    f"./data/{self.game_title}/{self.session_name}/{self.train_or_test}/label.csv") else pd.DataFrame(columns=self.columns)
+        self.save_path = os.getcwd() + f"/data/{self.game_title}/{self.train_or_test}/{self.session_name}"
 
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
