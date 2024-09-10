@@ -13,6 +13,7 @@ import cv2
 from torchvision import transforms
 import glob
 import win32gui
+from torch.utils.tensorboard import SummaryWriter  # Import TensorBoard
 
 # Named tuple for storing experience tuples
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -80,6 +81,7 @@ class Trainer:
         steps_done (int): Total number of steps taken in the environment.
         transform (torchvision.transforms.Compose): Image transformations for preprocessing.
         start_epoch (int): Starting epoch number (used for resuming training).
+        writer (SummaryWriter): TensorBoard writer for logging.
     """
 
     def __init__(self, args):
@@ -116,6 +118,8 @@ class Trainer:
         if args.resume:
             self.load_checkpoint()
 
+        self.writer = SummaryWriter(log_dir='logs')  # Initialize TensorBoard writer with log directory
+
     def transform_state(self, state):
         """
         Preprocess the state image for input to the neural network.
@@ -134,7 +138,6 @@ class Trainer:
         state_tensor = state_tensor.to(self.device)
         state_tensor = state_tensor.unsqueeze(0)
         return state_tensor
-
 
     def select_action(self, state):
         """
@@ -172,7 +175,7 @@ class Trainer:
                 action = self.select_action(state)
                 next_state, reward, done = self.env.step(action.item())
                 reward = torch.tensor([reward], device=self.device)
-                episode_reward += reward
+                episode_reward += reward.item()
 
                 if done:
                     next_state = None
@@ -194,14 +197,15 @@ class Trainer:
                 
                 if done:
                     self.env.reset()
-                    print(f"Episode {epoch+1} finished after {t+1} steps. Total reward: {episode_reward}")   
+                    print(f"Episode {epoch+1} finished after {t+1} steps. Total reward: {episode_reward}")
+                    self.writer.add_scalar('Reward/Episode', episode_reward, epoch)  # Log reward
                     break
                 
             if (epoch + 1) % self.args.checkpoint_interval == 0:
                 self.save_checkpoint(epoch + 1)
 
-
         print("Training completed.")
+        self.writer.close()  # Close the TensorBoard writer
 
     def optimize_model(self):
         """
@@ -237,6 +241,8 @@ class Trainer:
         torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         self.policy_optimizer.step()
 
+        self.writer.add_scalar('Loss/Step', loss.item(), self.steps_done)  # Log loss
+
     def save_checkpoint(self, epoch):
         """
         Save a checkpoint of the current model state.
@@ -257,7 +263,6 @@ class Trainer:
             'args': self.args
         }, checkpoint_path)
         print(f"Checkpoint saved to {checkpoint_path}")
-
 
     def load_checkpoint(self):
         """
@@ -288,7 +293,6 @@ class Trainer:
         
         print(f"Checkpoint loaded. Resuming from epoch {self.start_epoch}")
 
-
 def parse_args():
     """
     Parse command-line arguments for the training script.
@@ -311,6 +315,7 @@ def parse_args():
     parser.add_argument("--checkpoint_interval", type=int, default=10, help="Number of epochs between checkpoints")
     parser.add_argument("--checkpoint_dir", type=str, default="checkpoints/", help="Directory to save checkpoints")
     parser.add_argument("--resume", action="store_true", help="Resume training from the latest checkpoint")
+    parser.add_argument("--model_type", type=str, default="efficientnet", choices=["efficientnet", "resnet"], help="Type of model to use (efficientnet or resnet)")
     return parser.parse_args()
 
 if __name__ == "__main__":
