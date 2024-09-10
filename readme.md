@@ -1,7 +1,7 @@
 
 
 # Sekiro Reinforcement Learning Agent
-![top.jpg](assets/top.jpg)
+![top.jpg](assets/top.png)
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [Installation](#installation)
