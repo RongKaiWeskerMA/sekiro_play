@@ -6,7 +6,8 @@ import keyboard
 import pandas as pd
 from ctypes import windll, Structure, c_long, byref
 import win32api as wapi
-from .screen import grab_window
+import win32gui
+from screen import grab_window
 import json
 from warnings import filterwarnings
 
@@ -18,35 +19,36 @@ class POINT(Structure):
 class DataRecorder:
     def __init__(self):
         # Load configuration
-        with open('record_config.json') as config_file:
+        with open('configs/sekiro_config.json') as config_file:
             self.config = json.load(config_file)
 
         self.game_title = self.config.get('game_title', 'none_specified')
-        self.train_or_test = self.config.get("train_or_test", "train")
         self.session_name = self.config.get('session_name', 'session_1')
-        self.frame_size = self.config.get('frame_size', (1920, 1080))
+        self.frame_size = self.config.get('frame_size', (1280, 720))
         self.video_record_fps = self.config.get('video_record_fps', 30)
         self.time_format = self.config.get('time_format')
-        self.counter = len(os.listdir(f"./data/{self.game_title}/{self.train_or_test}/{self.session_name}/images")) \
-            if os.path.exists(f"./data/{self.game_title}/{self.train_or_test}/{self.session_name}/images") else 0
+        self.counter = len(os.listdir(f"data/{self.game_title}/{self.session_name}/images")) \
+            if os.path.exists(f"data/{self.game_title}/{self.session_name}/images") else 0
         self.max_frames = self.config["max_frames"]
-        self.myScreen = grab_window(self.config.get('region', (0, 0, 1920, 1080)))
+        
+        self.window = win32gui.FindWindow(None, self.game_title)    
+
+        
         # Virtual key codes for special keys
-        self.space_key  = 0x39
-        self.shift_key  = 0x2A
-        self.r_key      = 0x13
-        self.k_key      = 0x25
-        self.j_key      = 0x24
-        self.w_key      = 0x11
-        self.a_key      = 0x1E
-        self.s_key      = 0x1F
-        self.d_key      = 0x20
+       # Virtual key codes for special keys
+        self.space_key  = 0x20
+        self.shift_key  = 0x10
+        self.ctrl_key   = 0x11
+        self.esc_key    = 0x1B
+        self.enter_key  = 0x0D
+        self.alt_key    = 0x12
+        self.tab_key    = 0x09
         # create output dataframe
         self.columns = ['frame_name', 'record_time',
                    'space', 'shift', 'r', 'k', 'j', 'w', 'a', 's', 'd']
-        self.df = pd.read_csv(f"./data/{self.game_title}/{self.session_name}/{self.train_or_test}/label.csv") if os.path.exists(
-                    f"./data/{self.game_title}/{self.session_name}/{self.train_or_test}/label.csv") else pd.DataFrame(columns=self.columns)
-        self.save_path = os.getcwd() + f"/data/{self.game_title}/{self.train_or_test}/{self.session_name}"
+        self.df = pd.read_csv(f"data/{self.game_title}/{self.session_name}/label.csv") if os.path.exists(
+                    f"data/{self.game_title}/{self.session_name}/label.csv") else pd.DataFrame(columns=self.columns)
+        self.save_path = f"data/{self.game_title}/{self.session_name}"
 
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
@@ -58,7 +60,7 @@ class DataRecorder:
         self.record_data = False
 
     def fetch_frame(self):
-        frame = self.myScreen.get_frame()
+        frame = grab_window(self.window, self.config.get('game_resolution', [1280, 720]))
         return frame
 
     def key_check(self):
@@ -67,14 +69,7 @@ class DataRecorder:
         # Include space, shift, and specific keys
         special_keys = {
             "space": self.space_key,
-            "shift": self.shift_key,
-            "r":     self.r_key,
-            "k":     self.k_key,
-            "j":     self.j_key,
-            "w":     self.w_key,
-            "a":     self.a_key,
-            "s":     self.s_key,
-            "d":     self.d_key
+            "shift": self.shift_key,   
         }
 
         for key_name, key_code in special_keys.items():
@@ -82,6 +77,14 @@ class DataRecorder:
                 pressed_keys[key_name] = 1
             else:
                 pressed_keys[key_name] = 0
+
+        for key_code in range(97, 123):
+            key_char = chr(key_code)
+            if keyboard.is_pressed(key_char):
+                pressed_keys[key_char] = 1
+            else:
+                pressed_keys[key_char] = 0
+
 
         return pressed_keys
 
@@ -174,5 +177,8 @@ class DataRecorder:
 
 
 if __name__ == "__main__":
+    
+    
     data_recorder = DataRecorder()
+    win32gui.SetForegroundWindow(data_recorder.window)
     data_recorder.record()
