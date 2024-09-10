@@ -97,10 +97,9 @@ class Trainer:
 
         self.env = Sekiro_Env()
         self.action_space = self.env.action_space
-        self.dqn = DQN(self.action_space).to(self.device)
         
-        self.policy_net = DQN(self.action_space).to(self.device)
-        self.target_net = DQN(self.action_space).to(self.device)
+        self.policy_net = DQN(self.action_space, args.model_type).to(self.device)
+        self.target_net = DQN(self.action_space, args.model_type).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         
         self.policy_optimizer = optim.Adam(self.policy_net.parameters(), lr=args.lr, amsgrad=True)
