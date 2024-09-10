@@ -137,9 +137,9 @@ class action_interface:
         Simulate attacking in the game by pressing the 'J' key twice with a short delay between presses.
         """
         for i in range(2):
-            HoldKey(j_char)
+            HoldKey(k_char)
             time.sleep(0.05)
-            ReleaseKey(j_char)
+            ReleaseKey(k_char)
             time.sleep(0.5)
 
     def dodge(self):
@@ -155,9 +155,9 @@ class action_interface:
         Simulate parrying in the game by pressing the 'K' key three times with a short delay between presses.
         """
         for i in range(3):
-            HoldKey(k_char)
+            HoldKey(j_char)
             time.sleep(0.05)
-            ReleaseKey(k_char)
+            ReleaseKey(j_char)
             time.sleep(0.1)
 
     def drink(self):

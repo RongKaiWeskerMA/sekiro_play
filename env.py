@@ -13,7 +13,7 @@ from pyautogui import press, typewrite, hotkey
 from misc.action_interface import action_interface
 import cv2
 from misc.key_input import key_check
-from misc.key_output import HoldKey, ReleaseKey, k_char, l_char
+from misc.key_output import HoldKey, ReleaseKey, j_char, l_char
 
 class Sekiro_Env:
     """
@@ -304,9 +304,9 @@ class Sekiro_Env:
         self.counter = 0
         self.dead_counter = 0
         time.sleep(6)
-        HoldKey(k_char)
+        HoldKey(j_char)
         time.sleep(0.3)
-        ReleaseKey(k_char)
+        ReleaseKey(j_char)
         time.sleep(10)
         self.action_interface.reset_state()
         time.sleep(11)
