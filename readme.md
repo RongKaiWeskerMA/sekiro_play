@@ -16,7 +16,7 @@
 
 ## Project Overview
 
-This project implements a Deep Q-Network (DQN) agent to play Sekiro: Shadows Die Twice using reinforcement learning. The agent uses a pre-trained ResNet18 model as its backbone and learns to make optimal decisions in the game environment.
+This project implements a Deep Q-Network (DQN) agent to play Sekiro: Shadows Die Twice using reinforcement learning. The agent uses a pre-trained ResNet18 (EfficientNet-B0 is also supported) model as its backbone and learns to make optimal decisions in the game environment and we will try to integrate vision transformer/decision transformer in the future.
 
 ## Installation
 
@@ -110,7 +110,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## To Do
 
-- Implement behavior cloning to slightly fine-tune the model before applying heavy reinforcement learning algorithms.
+- Implement **behavior cloning** to slightly fine-tune the model before applying heavy reinforcement learning algorithms.
 - Collect and preprocess expert gameplay data for behavior cloning.
 - Integrate behavior cloning into the training pipeline.
 - Experiment with different reinforcement learning algorithms to improve agent performance.
