@@ -125,3 +125,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 For any questions or issues, please open an issue on the GitHub repository.
+
+## Acknowledgments
+
+We would like to thank the authors of the following repositories for their contributions and inspiration:
+
+1. [Counter-Strike Behavioural Cloning](https://github.com/TeaPearce/Counter-Strike_Behavioural_Cloning) by **TeaPearce**
+2. [Train Your Own Game AI](https://github.com/ricagj/train_your_own_game_AI) by **ricagj**
