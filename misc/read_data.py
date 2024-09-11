@@ -10,9 +10,9 @@ def read_label(label_path):
         img_name = row[0]
         for i in range(len(keys)):
             if float(row[i+2]) == 1:
-                mapped_values[img_name] = keys[i + 2] 
-    
-       
+                mapped_values[img_name] = keys[i + 2]
+            else:
+                mapped_values[img_name] = "other"
     return mapped_values
 
 
