@@ -102,7 +102,7 @@ class Trainer:
         self.target_net = DQN(self.action_space, args.model_type).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         
-        self.policy_optimizer = optim.Adam(self.policy_net.parameters(), lr=args.lr, amsgrad=True)
+        self.policy_optimizer = optim.AdamW(self.policy_net.parameters(), lr=args.lr, amsgrad=True)
         
         self.memory = ReplayBuffer(10000)  # You might want to make buffer size an argument
         self.steps_done = 0
@@ -312,7 +312,7 @@ def parse_args():
     parser.add_argument("--eps_decay", type=int, default=1000, help="Decay rate for epsilon in epsilon-greedy exploration")
     parser.add_argument("--tau", type=float, default=0.005, help="Update rate for target network")
     parser.add_argument("--checkpoint_interval", type=int, default=10, help="Number of epochs between checkpoints")
-    parser.add_argument("--checkpoint_dir", type=str, default="checkpoints/", help="Directory to save checkpoints")
+    parser.add_argument("--checkpoint_dir", type=str, default="checkpoints/rl", help="Directory to save checkpoints")
     parser.add_argument("--resume", action="store_true", help="Resume training from the latest checkpoint")
     parser.add_argument("--model_type", type=str, default="efficientnet", choices=["efficientnet", "resnet"], help="Type of model to use (efficientnet or resnet)")
     return parser.parse_args()

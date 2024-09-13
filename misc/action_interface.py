@@ -55,28 +55,28 @@ class action_interface:
         - action_map (dict): A dictionary where each key is an integer representing an action,
                              and each value is a tuple (description, function).
         """
-        # action_map = {
-        #     0: ("move_forward", lambda: self.move_forward()),
-        #     1: ("move_left", lambda: self.move_left()),
-        #     2: ("move_backward", lambda: self.move_backward()),
-        #     3: ("move_right", lambda: self.move_right()),
-        #     4: ("attack", lambda: self.attack()),
-        #     5: ("dodge", lambda: self.dodge()),
-        #     6: ("run", lambda: self.run()),
-        #     7: ("jump", lambda: self.jump()),
-        #     8: ("parry", lambda: self.parry()),
-        #     9: ("drink", lambda: self.drink()),    
-        # }
-
         action_map = {
             0: ("move_forward", lambda: self.move_forward()),
             1: ("move_left", lambda: self.move_left()),
-            2: ("move_right", lambda: self.move_right()),
-            3: ("attack", lambda: self.attack()),
-            4: ("dodge", lambda: self.dodge()),
-            5: ("parry", lambda: self.parry()),
-            6: ("drink", lambda: self.drink()),    
+            2: ("move_backward", lambda: self.move_backward()),
+            3: ("move_right", lambda: self.move_right()),
+            4: ("attack", lambda: self.attack()),
+            5: ("dodge", lambda: self.dodge()),
+            6: ("jump", lambda: self.jump()),
+            7: ("parry", lambda: self.parry()),
+            8: ("drink", lambda: self.drink()),    
+            9: ("static", lambda: self.static()),
         }
+
+        # action_map = {
+        #     0: ("move_forward", lambda: self.move_forward()),
+        #     1: ("move_left", lambda: self.move_left()),
+        #     2: ("move_right", lambda: self.move_right()),
+        #     3: ("attack", lambda: self.attack()),
+        #     4: ("dodge", lambda: self.dodge()),
+        #     5: ("parry", lambda: self.parry()),
+        #     6: ("drink", lambda: self.drink()),    
+        # }
 
 
 
@@ -167,6 +167,12 @@ class action_interface:
         HoldKey(r_char)
         time.sleep(0.3)
         ReleaseKey(r_char)
+    
+    def static(self):
+        """
+        Simulate static in the game by holding the 'W' key for a set duration.
+        """
+        pass
 
     def reset_state(self):
         """
