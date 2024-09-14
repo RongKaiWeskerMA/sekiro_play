@@ -5,7 +5,7 @@ import torch
 import pandas as pd
 from collections import OrderedDict
 import os
-
+from PIL import Image
 
 class SekiroDataset(Dataset):
     """
@@ -33,7 +33,8 @@ class SekiroDataset(Dataset):
         self.data = []
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+             transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         
         self.label_path = [os.path.join(data_dir, f'session_{i}', "label.csv") for i in range(1, 11)]
@@ -62,10 +63,9 @@ class SekiroDataset(Dataset):
             torch.Tensor: Preprocessed state tensor.
         """
         state = cv2.cvtColor(state, cv2.COLOR_BGR2RGB)
-        state_transpose = state.transpose((2, 0, 1)) / 255
-        state_tensor = torch.tensor(state_transpose, dtype=torch.float32)
-        state_tensor = self.transform(state_tensor)
-        state_tensor = state_tensor.to(self.device)
+        im_pil = Image.fromarray(state)
+        state_tensor = self.transform(im_pil)
+       
         return state_tensor 
     
     def read_label(self, label_paths):
@@ -113,7 +113,7 @@ class SekiroDataset(Dataset):
         img_path, action = self.data[idx]
         img = cv2.imread(img_path)
         img = self.transform_state(img)
-        label = torch.tensor(action, dtype=torch.long, device=self.device)
+        label = torch.tensor(action, dtype=torch.long)
         return img, label
 
 

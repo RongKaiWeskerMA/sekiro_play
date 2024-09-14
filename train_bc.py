@@ -45,7 +45,7 @@ class Trainer:
         self.env = Sekiro_Env()
         print(f"Using device: {self.device}")
         
-        self.action_space = len(self.env.action_space)
+        self.action_space = self.env.action_space
         self.model = DQN(self.action_space, args.model_type).to(self.device)
         self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr, amsgrad=True)
         self.dataset = SekiroDataset(data_dir='data/Sekiro')
@@ -68,6 +68,8 @@ class Trainer:
         total_samples = 0
         for i, data in enumerate(self.train_loader):
             inputs, labels = data
+            inputs = inputs.to(self.device)
+            labels = labels.to(self.device)
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
             loss = F.cross_entropy(outputs, labels)
@@ -97,6 +99,8 @@ class Trainer:
         with torch.no_grad():
             for i, data in enumerate(self.val_loader):
                 inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device) 
                 outputs = self.model(inputs)
                 loss = F.cross_entropy(outputs, labels)
                 val_loss += loss.item()
