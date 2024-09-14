@@ -47,13 +47,13 @@ class Trainer:
         
         self.action_space = self.env.action_space
         self.model = DQN(self.action_space, args.model_type).to(self.device)
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr, amsgrad=True)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr, amsgrad=True, weight_decay=0.01)
         self.dataset = SekiroDataset(data_dir='data/Sekiro')
         train_size = int(len(self.dataset) * 0.8)
         val_size = len(self.dataset) - train_size
         self.train_dataset, self.val_dataset = random_split(self.dataset, [train_size, val_size])
-        self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True)
-        self.val_loader = DataLoader(self.val_dataset, batch_size=args.batch_size, shuffle=False)
+        self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
+        self.val_loader = DataLoader(self.val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
         self.start_epoch = 0
         self.best_val_loss = float('inf')  # Initialize best validation loss to infinity
         if args.resume:
@@ -142,6 +142,7 @@ class Trainer:
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
+            'best_val_loss': self.best_val_loss,
             'args': self.args
         }, checkpoint_path)
         print(f"Checkpoint saved to {checkpoint_path}")
@@ -164,7 +165,7 @@ class Trainer:
         print(f"Loading checkpoint: {latest_checkpoint}")
 
         checkpoint = torch.load(latest_checkpoint, map_location=self.device)
-        
+        self.best_val_loss = checkpoint['best_val_loss']
         self.start_epoch = checkpoint['epoch']
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -184,7 +185,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Sekiro RL Training Script")
     
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size for training")
+    parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs to train")
     parser.add_argument("--cuda", action="store_true", default=True, help="Use CUDA if available")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")

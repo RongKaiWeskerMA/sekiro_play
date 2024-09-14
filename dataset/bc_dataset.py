@@ -62,9 +62,8 @@ class SekiroDataset(Dataset):
         Returns:
             torch.Tensor: Preprocessed state tensor.
         """
-        state = cv2.cvtColor(state, cv2.COLOR_BGR2RGB)
-        im_pil = Image.fromarray(state)
-        state_tensor = self.transform(im_pil)
+        
+        state_tensor = self.transform(state)
        
         return state_tensor 
     
@@ -111,7 +110,7 @@ class SekiroDataset(Dataset):
             tuple: Tuple containing the image and the corresponding action.
         """
         img_path, action = self.data[idx]
-        img = cv2.imread(img_path)
+        img = Image.open(img_path)
         img = self.transform_state(img)
         label = torch.tensor(action, dtype=torch.long)
         return img, label
