@@ -13,8 +13,8 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader, random_split
 import glob
 from torch.utils.tensorboard import SummaryWriter  # Import TensorBoard
+from dataset.bc_dataset import SekiroDataset
 
-# Named tuple for storing experience tuples
 
 class Trainer:
     """
@@ -25,11 +25,12 @@ class Trainer:
         device (torch.device): Device to run the model on (CPU or CUDA).
         env (Sekiro_Env): Environment for training.
         action_space (int): Number of actions in the environment.
-        model (DQN): Policy network model.
-        optimizer (torch.optim.Optimizer): Optimizer for the policy network.
+        model (DQN): network model.
+        optimizer (torch.optim.Optimizer): Optimizer for the network.
         transform (torchvision.transforms.Compose): Image transformations for preprocessing.
         start_epoch (int): Starting epoch number (used for resuming training).
         writer (SummaryWriter): TensorBoard writer for logging.
+        best_val_loss (float): Best validation loss observed so far.
     """
 
     def __init__(self, args):
@@ -46,122 +47,80 @@ class Trainer:
         
         self.action_space = len(self.env.action_space)
         self.model = DQN(self.action_space, args.model_type).to(self.device)
-        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=args.lr, amsgrad=True)
-    
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            # transforms.CenterCrop(224),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-        
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr, amsgrad=True)
+        self.dataset = SekiroDataset(data_dir='data/Sekiro')
+        train_size = int(len(self.dataset) * 0.8)
+        val_size = len(self.dataset) - train_size
+        self.train_dataset, self.val_dataset = random_split(self.dataset, [train_size, val_size])
+        self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True)
+        self.val_loader = DataLoader(self.val_dataset, batch_size=args.batch_size, shuffle=False)
         self.start_epoch = 0
+        self.best_val_loss = float('inf')  # Initialize best validation loss to infinity
         if args.resume:
             self.load_checkpoint()
 
         self.writer = SummaryWriter(log_dir='logs')  # Initialize TensorBoard writer with log directory
 
-    def transform_state(self, state):
-        """
-        Preprocess the state image for input to the neural network.
-        
-        Args:
-            state (numpy.ndarray): Raw state image from the environment.
-        
-        Returns:
-            torch.Tensor: Preprocessed state tensor.
-        """
-        # convert opencv state to torch tensor
-        state = cv2.cvtColor(state, cv2.COLOR_BGR2RGB)
-        state_transpose = state.transpose((2, 0, 1)) / 255
-        state_tensor = torch.tensor(state_transpose, dtype=torch.float32)
-        state_tensor = self.transform(state_tensor)
-        state_tensor = state_tensor.to(self.device)
-        state_tensor = state_tensor.unsqueeze(0)
-        return state_tensor
-
-
-    def train(self):
-        """
-        Main training loop for the DQN agent.
-        
-        This method runs the training process for the specified number of epochs,
-        collecting experiences, optimizing the model, and periodically saving checkpoints.
-        """
-        for epoch in range(self.start_epoch, self.args.epochs):
-            state = self.env.get_state()
-            episode_reward = 0
-            state = self.transform_state(state)
-            for t in count():
-                action = self.select_action(state)
-                next_state, reward, done = self.env.step(action.item())
-                reward = torch.tensor([reward], device=self.device)
-                episode_reward += reward.item()
-
-                if done:
-                    next_state = None
-                else:
-                    next_state = self.transform_state(next_state)
-
-                self.memory.push(state, action, next_state, reward)
-
-                state = next_state
-
-                self.optimize_model()
-                # Soft update of the target network's weights
-                # θ′ ← τ θ + (1 −τ )θ′
-                target_net_state_dict = self.target_net.state_dict()
-                policy_net_state_dict = self.policy_net.state_dict()
-                for key in policy_net_state_dict:
-                    target_net_state_dict[key] = policy_net_state_dict[key] * self.args.tau + target_net_state_dict[key] * (1 - self.args.tau)
-                self.target_net.load_state_dict(target_net_state_dict)
+    def train_one_epoch(self, epoch):
+        self.model.train()
+        running_loss = 0.0
+        running_corrects = 0
+        total_samples = 0
+        for i, data in enumerate(self.train_loader):
+            inputs, labels = data
+            self.optimizer.zero_grad()
+            outputs = self.model(inputs)
+            loss = F.cross_entropy(outputs, labels)
+            loss.backward()
+            self.optimizer.step()
+            running_loss += loss.item()
+            
+            # Calculate accuracy
+            _, preds = torch.max(outputs, 1)
+            running_corrects += torch.sum(preds == labels.data)
+            total_samples += labels.size(0)
+            
+            self.writer.add_scalar("Training Loss", loss.item(), epoch * len(self.train_loader) + i)
+            
+            if i % 10 == 0:
+                print(f"Epoch {epoch}, Step {i}, Loss {loss.item()}")
                 
-                if done:
-                    self.env.reset()
-                    print(f"Episode {epoch+1} finished after {t+1} steps. Total reward: {episode_reward}")
-                    self.writer.add_scalar('Reward/Episode', episode_reward, epoch)  # Log reward
-                    break
-                
-            if (epoch + 1) % self.args.checkpoint_interval == 0:
-                self.save_checkpoint(epoch + 1)
-
-        print("Training completed.")
-        self.writer.close()  # Close the TensorBoard writer
-
-    def optimize_model(self):
-        """
-        Perform one step of optimization to train the model.
+        avg_loss = running_loss / len(self.train_loader)
+        avg_accuracy = running_corrects.double() / total_samples
+        print(f"End of epoch {epoch}, Average Loss {avg_loss}, Accuracy {avg_accuracy:.4f}")
         
-        This method samples a batch from the replay buffer, computes the loss,
-        and updates the policy network's parameters.
-        """
-        if len(self.memory) < self.args.batch_size:
-            return
-        transitions = self.memory.sample(self.args.batch_size)
-        batch = Transition(*zip(*transitions))
-
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=self.device, dtype=torch.bool)
-        non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
-        
-        state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
-
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
-
-        next_state_values = torch.zeros(self.args.batch_size, device=self.device)
+    def validate_one_epoch(self, epoch):
+        self.model.eval()
+        val_loss = 0.0
+        running_corrects = 0
+        total_samples = 0
         with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
-        
-        expected_state_action_values = (next_state_values * self.args.gamma) + reward_batch
-
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values.unsqueeze(1))
-
-        self.policy_optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
-        self.policy_optimizer.step()
-
-        self.writer.add_scalar('Loss/Step', loss.item(), self.steps_done)  # Log loss
+            for i, data in enumerate(self.val_loader):
+                inputs, labels = data
+                outputs = self.model(inputs)
+                loss = F.cross_entropy(outputs, labels)
+                val_loss += loss.item()
+                
+                # Calculate accuracy
+                _, preds = torch.max(outputs, 1)
+                running_corrects += torch.sum(preds == labels.data)
+                total_samples += labels.size(0)
+                
+                self.writer.add_scalar("Validation Loss", loss.item(), epoch * len(self.val_loader) + i)
+                
+        avg_val_loss = val_loss / len(self.val_loader)
+        avg_val_accuracy = running_corrects.double() / total_samples
+        print(f"Epoch [{epoch+1}/{self.args.epochs}], Validation Loss: {avg_val_loss:.4f}, Validation Accuracy: {avg_val_accuracy:.4f}")
+        return avg_val_loss
+    
+    def train(self):
+        for epoch in range(self.start_epoch, self.args.epochs):
+            self.train_one_epoch(epoch)
+            avg_val_loss = self.validate_one_epoch(epoch)
+            if avg_val_loss < self.best_val_loss:
+                self.best_val_loss = avg_val_loss
+                self.save_checkpoint(epoch)
+                print(f"Checkpoint saved at epoch {epoch} with validation loss {avg_val_loss:.4f}")
 
     def save_checkpoint(self, epoch):
         """
@@ -225,11 +184,6 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs to train")
     parser.add_argument("--cuda", action="store_true", default=True, help="Use CUDA if available")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor for future rewards")
-    parser.add_argument("--eps_start", type=float, default=0.9, help="Starting value of epsilon for epsilon-greedy exploration")
-    parser.add_argument("--eps_end", type=float, default=0.05, help="Final value of epsilon for epsilon-greedy exploration")
-    parser.add_argument("--eps_decay", type=int, default=1000, help="Decay rate for epsilon in epsilon-greedy exploration")
-    parser.add_argument("--tau", type=float, default=0.005, help="Update rate for target network")
     parser.add_argument("--checkpoint_interval", type=int, default=10, help="Number of epochs between checkpoints")
     parser.add_argument("--checkpoint_dir", type=str, default="checkpoints/bc/", help="Directory to save checkpoints")
     parser.add_argument("--resume", action="store_true", help="Resume training from the latest checkpoint")

@@ -66,7 +66,6 @@ class SekiroDataset(Dataset):
         state_tensor = torch.tensor(state_transpose, dtype=torch.float32)
         state_tensor = self.transform(state_tensor)
         state_tensor = state_tensor.to(self.device)
-        state_tensor = state_tensor.unsqueeze(0)
         return state_tensor 
     
     def read_label(self, label_paths):
@@ -114,7 +113,8 @@ class SekiroDataset(Dataset):
         img_path, action = self.data[idx]
         img = cv2.imread(img_path)
         img = self.transform_state(img)
-        return img, action
+        label = torch.tensor(action, dtype=torch.long, device=self.device)
+        return img, label
 
 
 if __name__ == "__main__":
