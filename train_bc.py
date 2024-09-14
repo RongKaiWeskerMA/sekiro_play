@@ -62,6 +62,11 @@ class Trainer:
         self.writer = SummaryWriter(log_dir='logs')  # Initialize TensorBoard writer with log directory
 
     def train_one_epoch(self, epoch):
+        """
+        Train the model for one epoch.
+        Args:
+        epoch (int): Current epoch number.
+        """
         self.model.train()
         running_loss = 0.0
         running_corrects = 0
@@ -89,9 +94,19 @@ class Trainer:
                 
         avg_loss = running_loss / len(self.train_loader)
         avg_accuracy = running_corrects.double() / total_samples
+        self.writer.add_scalar("train_accuracy", avg_accuracy, epoch)   
         print(f"End of epoch {epoch}, Average Loss {avg_loss}, Accuracy {avg_accuracy:.4f}")
         
     def validate_one_epoch(self, epoch):
+        """
+        Validate the model for one epoch.
+
+        Args:
+            epoch (int): Current epoch number.
+        
+        Returns:
+            float: Average validation loss for the epoch.
+        """
         self.model.eval()
         val_loss = 0.0
         running_corrects = 0
@@ -115,9 +130,16 @@ class Trainer:
         avg_val_loss = val_loss / len(self.val_loader)
         avg_val_accuracy = running_corrects.double() / total_samples
         print(f"Epoch [{epoch+1}/{self.args.epochs}], Validation Loss: {avg_val_loss:.4f}, Validation Accuracy: {avg_val_accuracy:.4f}")
+        self.writer.add_scalar("val_accuracy", avg_val_accuracy, epoch)
         return avg_val_loss
     
     def train(self):
+        """
+        Train the model for the specified number of epochs.
+
+        This method handles the training loop, including training and validation
+        for each epoch, and saving checkpoints when the validation loss improves.
+        """
         for epoch in range(self.start_epoch, self.args.epochs):
             self.train_one_epoch(epoch)
             avg_val_loss = self.validate_one_epoch(epoch)
@@ -125,6 +147,7 @@ class Trainer:
                 self.best_val_loss = avg_val_loss
                 self.save_checkpoint(epoch)
                 print(f"Checkpoint saved at epoch {epoch} with validation loss {avg_val_loss:.4f}")
+        self.writer.close()
 
     def save_checkpoint(self, epoch):
         """
