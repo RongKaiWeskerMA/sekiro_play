@@ -7,15 +7,10 @@ from collections import OrderedDict
 import os
 
 
-
-
-
-
-
 class SekiroDataset(Dataset):
-    def __init__(self, data_dir, args):
+    def __init__(self, data_dir, cuda=True):
         self.data_dir = data_dir
-        self.device = torch.device("cuda" if args.cuda and torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if cuda and torch.cuda.is_available() else "cpu")
         self.data = []
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -35,7 +30,8 @@ class SekiroDataset(Dataset):
             'r': 8,
             'other': 9    
         }
-    
+        self.read_label(self.label_path)
+
     def transform_state(self, state):
         state = cv2.cvtColor(state, cv2.COLOR_BGR2RGB)
         state_transpose = state.transpose((2, 0, 1)) / 255
@@ -46,7 +42,7 @@ class SekiroDataset(Dataset):
         return state_tensor 
     
     def read_label(self, label_paths):
-        for label_path in label_paths:
+        for session, label_path in enumerate(label_paths, 1):
             df = pd.read_csv(label_path, header=None)
             keys = df.iloc[0, 2:] 
             for index, row in df.iterrows():
@@ -54,11 +50,25 @@ class SekiroDataset(Dataset):
                     continue  # Skip the first row
                 img_name = row[0]
                 for i in range(len(keys)):
-                    if float(row[i+2]) == 1:
+                    if float(row[i+2]) == 1 and keys[i+2] != 'l':
                         action = self.key2action[keys[i + 2]]
-                        self.data.append((os.path.join(self.data_dir, 'images', img_name), action))
+                        self.data.append((os.path.join(self.data_dir, f'session_{session}', 'images', img_name), action))
                         break
-                    else:
+                    elif i == len(keys) - 1:
                         action = self.key2action["other"]
-                        self.data.append((os.path.join(self.data_dir, 'images', img_name), action))
+                        self.data.append((os.path.join(self.data_dir, f'session_{session}', 'images', img_name), action))
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        img_path, action = self.data[idx]
+        img = cv2.imread(img_path)
+        img = self.transform_state(img)
+        return img, action
+
+
+if __name__ == "__main__":
+    dataset = SekiroDataset(data_dir='data/Sekiro')
+    print(dataset[0])   
        
