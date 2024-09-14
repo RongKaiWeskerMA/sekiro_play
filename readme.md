@@ -116,9 +116,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## To Do
 
-- Implement **behavior cloning** to slightly fine-tune the model before applying heavy reinforcement learning algorithms.
-- Collect and preprocess expert gameplay data for behavior cloning.
-- Integrate behavior cloning into the training pipeline.
+- ✅ Implement **behavior cloning** to slightly fine-tune the model before applying heavy reinforcement learning algorithms.
+- ✅ Collect and preprocess expert gameplay data for behavior cloning.
+- ✅ Integrate behavior cloning into the training pipeline.
 - Experiment with different reinforcement learning algorithms to improve agent performance.
 - Add more detailed logging and visualization of training progress.
 
