@@ -41,17 +41,26 @@ This project implements a Deep Q-Network (DQN) agent to play Sekiro: Shadows Die
 - `checkpoints/`: Directory for storing model checkpoints
 
 ## Usage
-
+The training process is divided into two stages:
+- ### Train Behavior Cloning model
 To start training the agent, run:
 
 ```
-python train.py
+python train_bc.py
 ```
 
 You can customize the training process using various command-line arguments. For example:
 
 ```
 python train.py --lr 0.0001 --batch_size 128 --epochs 500 --cuda
+```
+
+- ### Train Reinforcement Learning model
+Make you load the weights of the behavior cloning model you trained in the previous stage.
+To train the reinforcement learning model, run:
+
+```
+python train_rl.py 
 ```
 
 Run `python train.py --help` to see all available options.
