@@ -37,7 +37,7 @@ class SekiroDataset(Dataset):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         
-        self.label_path = [os.path.join(data_dir, f'session_{i}', "label.csv") for i in range(1, 11)]
+        self.label_path = [os.path.join(data_dir, f'session_{i}', "label.csv") for i in range(1, 15)]
         self.key2action =  {
             'w': 0,
             'a': 1,
