@@ -52,7 +52,7 @@ python train_bc.py
 You can customize the training process using various command-line arguments. For example:
 
 ```bash
-python train.py --lr 0.0001 --batch_size 128 --epochs 500 --cuda
+python train_bc.py --lr 0.0001 --batch_size 128 --epochs 500 --cuda
 ```
 
 - ### Train Reinforcement Learning model
