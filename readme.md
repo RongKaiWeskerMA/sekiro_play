@@ -63,7 +63,7 @@ To train the reinforcement learning model, run:
 python train_rl.py 
 ```
 
-Run `python train.py --help` to see all available options.
+Run `python train_rl.py --help` to see all available options.
 
 ## Training Process
 **Prerequisites**:
