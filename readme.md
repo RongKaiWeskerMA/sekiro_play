@@ -45,13 +45,13 @@ The training process is divided into two stages:
 - ### Train Behavior Cloning model
 To start training the agent, run:
 
-```
+```bash
 python train_bc.py
 ```
 
 You can customize the training process using various command-line arguments. For example:
 
-```
+```bash
 python train.py --lr 0.0001 --batch_size 128 --epochs 500 --cuda
 ```
 
@@ -59,7 +59,7 @@ python train.py --lr 0.0001 --batch_size 128 --epochs 500 --cuda
 Make you load the weights of the behavior cloning model you trained in the previous stage.
 To train the reinforcement learning model, run:
 
-```
+```bash
 python train_rl.py 
 ```
 
