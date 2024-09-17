@@ -41,6 +41,7 @@ class SekiroDataset(Dataset):
             self.label_path = [os.path.join(data_dir, f"session_{i}", "label.csv") for i in range(1, session_range+1)]
         else:
             self.label_path = [os.path.join(data_dir, f"session_{i}", "label.csv") for i in range(session_range+1, 21)]
+        
         self.key2action =  {
             'w': 0,
             'a': 1,
@@ -77,7 +78,8 @@ class SekiroDataset(Dataset):
         Args:
             label_paths (list): List of paths to label CSV files.
         """
-        for session, label_path in enumerate(label_paths, 1):
+        for label_path in label_paths:
+            session = label_path.split("_")[1]
             df = pd.read_csv(label_path, header=None)
             keys = df.iloc[0, 2:] 
             for index, row in df.iterrows():
@@ -87,11 +89,11 @@ class SekiroDataset(Dataset):
                 for i in range(len(keys)):
                     if float(row[i+2]) == 1 and keys[i+2] != 'l':
                         action = self.key2action[keys[i + 2]]
-                        self.data.append((os.path.join(self.data_dir, f'session_{session}', 'images', img_name), action))
+                        self.data.append((os.path.join(self.data_dir, session, 'images', img_name), action))
                         break
                     elif i == len(keys) - 1:
                         action = self.key2action["other"]
-                        self.data.append((os.path.join(self.data_dir, f'session_{session}', 'images', img_name), action))
+                        self.data.append((os.path.join(self.data_dir, session, 'images', img_name), action))
 
     def __len__(self):
         """
