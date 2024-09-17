@@ -51,10 +51,8 @@ class Trainer:
             {"params": self.model.model.features.parameters(), "lr": args.lr},
             {"params": self.model.model.classifier.parameters(), "lr": args.lr * 10}  
         ], amsgrad=True, weight_decay=0.01)
-        self.dataset = SekiroDataset(data_dir='data/Sekiro')
-        train_size = int(len(self.dataset) * 0.8)
-        val_size = len(self.dataset) - train_size
-        self.train_dataset, self.val_dataset = random_split(self.dataset, [train_size, val_size])
+        self.train_dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=True)
+        self.val_dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=False)
         self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
         self.val_loader = DataLoader(self.val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
         self.start_epoch = 0

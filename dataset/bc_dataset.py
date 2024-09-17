@@ -20,7 +20,7 @@ class SekiroDataset(Dataset):
         key2action (dict): Mapping of keys to action indices.
     """
 
-    def __init__(self, data_dir, cuda=True):
+    def __init__(self, data_dir, session_range, train_set=True, cuda=True):
         """
         Initialize the SekiroDataset with the directory and device.
 
@@ -37,7 +37,10 @@ class SekiroDataset(Dataset):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         
-        self.label_path = [os.path.join(data_dir, session, "label.csv") for session in os.listdir(data_dir)]
+        if train_set:
+            self.label_path = [os.path.join(data_dir, f"session_{i}", "label.csv") for i in range(1, session_range+1)]
+        else:
+            self.label_path = [os.path.join(data_dir, f"session_{i}", "label.csv") for i in range(session_range+1, 21)]
         self.key2action =  {
             'w': 0,
             'a': 1,
