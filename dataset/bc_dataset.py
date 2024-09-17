@@ -79,7 +79,7 @@ class SekiroDataset(Dataset):
             label_paths (list): List of paths to label CSV files.
         """
         for label_path in label_paths:
-            session = label_path.split("_")[1]
+            session = label_path.split("\\")[1]
             df = pd.read_csv(label_path, header=None)
             keys = df.iloc[0, 2:] 
             for index, row in df.iterrows():
