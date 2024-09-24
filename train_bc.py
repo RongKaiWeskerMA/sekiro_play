@@ -126,11 +126,12 @@ class Trainer:
                 running_corrects += torch.sum(preds == labels.data)
                 total_samples += labels.size(0)
                 
-                self.writer.add_scalar("Validation Loss", loss.item(), epoch * len(self.val_loader) + i)
+        
                 
         avg_val_loss = val_loss / len(self.val_loader)
         avg_val_accuracy = running_corrects.double() / total_samples
         print(f"Epoch [{epoch+1}/{self.args.epochs}], Validation Loss: {avg_val_loss:.4f}, Validation Accuracy: {avg_val_accuracy:.4f}")
+        self.writer.add_scalar("Validation Loss", avg_val_loss, epoch)
         self.writer.add_scalar("val_accuracy", avg_val_accuracy, epoch)
         return avg_val_loss
     

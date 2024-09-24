@@ -1,8 +1,8 @@
 {
     "game_title": "Sekiro",
-    "session_name": "session_20",
+    "session_name": "session_26",
     "game_resolution": [1280, 720],
-    "video_record_fps": 16,
+    "video_record_fps": 3,
     "time_format": "unix",
     "max_frames": 60000,
     "image_folder": "images",

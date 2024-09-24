@@ -15,6 +15,7 @@ import cv2
 from misc.key_input import key_check
 from misc.key_output import HoldKey, ReleaseKey, j_char, l_char
 
+
 class Sekiro_Env:
     """
     A class to represent the game environment for Sekiro.
@@ -323,27 +324,44 @@ if __name__ == "__main__":
     """
     # cv2.imshow('test_health', next_state)
     # cv2.waitKey(0)
-    def model(state):
-        action = random.randint(0, 9)
-        return action
+    
+    # def model(state):
+    #     action = random.randint(0, 9)
+    #     return action
+    
 
-    # env = Sekiro_Env()
+    transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+             transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+
+    
+
+    env = Sekiro_Env()
+
+    model = DQN(env.action_space, 'efficientnet').to('cuda')
+    model.load_state_dict(torch.load('checkpoints/bc/checkpoint_epoch_6.pth', map_location=torch.device('cuda'))['model_state_dict'])
+    model.eval()
     # for i in range(10000000000):
     #     img = env.get_state()
     #     cv2.imwrite(f"test_imgs/test_{i}.png", img)
-    # obs = env.get_state()
+    win32gui.SetForegroundWindow(env.hwin_sekiro)
+    obs = env.get_state()
     
-    # while True:
-    #     action = model(obs)
-    #     obs, reward, done = env.step(action)
-    #     if done:
-    #         env.reset()
+    while True:
+        input = transform(Image.fromarray(cv2.cvtColor(obs, cv2.COLOR_BGR2RGB))).to("cuda").unsqueeze(0)
+        output = model(input)
+        action = output.argmax().item()
+        print(action)
+        obs, reward, done = env.step(action)
         
-    #     keys_pressed_tp = key_check()
-    #     if 'Q' in keys_pressed_tp:
-    #         # exit loop
-    #         print('exiting...')
+        
+        keys_pressed_tp = key_check()
+        if 'Q' in keys_pressed_tp:
+            # exit loop
+            print('exiting...')
             
-    #         break
+            break
 
 
