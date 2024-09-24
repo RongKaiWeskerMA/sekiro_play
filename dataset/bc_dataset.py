@@ -1,9 +1,9 @@
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, random_split, WeightedRandomSampler
 from torchvision import transforms
 import cv2
 import torch
 import pandas as pd
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 import os
 from PIL import Image
 
@@ -26,6 +26,8 @@ class SekiroDataset(Dataset):
 
         Args:
             data_dir (str): Directory containing the dataset.
+            session_range (int): Range of sessions to include in the dataset.
+            train_set (bool): Flag to indicate if the dataset is for training or validation.
             cuda (bool): Flag to use CUDA if available.
         """
         self.data_dir = data_dir
@@ -33,7 +35,7 @@ class SekiroDataset(Dataset):
         self.data = []
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
-             transforms.ToTensor(),
+            transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         
@@ -120,6 +122,24 @@ class SekiroDataset(Dataset):
         label = torch.tensor(action, dtype=torch.long)
         return img, label
 
+    def get_sampler(self):
+        """
+        Create a weighted sampler to handle imbalanced classes.
+
+        Returns:
+            WeightedRandomSampler: A sampler that samples elements according to the specified weights.
+        """
+        # Count the frequency of each class in the dataset
+        class_counts = Counter([label for _, label in self.data])
+        num_samples = len(self.data)
+        
+        # Calculate the weight for each sample
+        weights = [1.0 / class_counts[label] for _, label in self.data]
+        
+        # Create a weighted random sampler
+        sampler = WeightedRandomSampler(weights, num_samples)
+        return sampler
+
 
 if __name__ == "__main__":
     """
@@ -127,5 +147,9 @@ if __name__ == "__main__":
 
     This section initializes the dataset and prints the first sample.
     """
-    dataset = SekiroDataset(data_dir='data/Sekiro')
-    print(dataset[0])   
+    dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=True)
+    sampler = dataset.get_sampler()
+    dataloader = DataLoader(dataset, batch_size=64, sampler=sampler)
+    for data in dataloader:
+        print(data)
+        break

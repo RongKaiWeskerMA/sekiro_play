@@ -52,8 +52,9 @@ class Trainer:
             {"params": self.model.model.classifier.parameters(), "lr": args.lr * 10}  
         ], amsgrad=True, weight_decay=0.01)
         self.train_dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=True)
+        self.train_sampler = self.train_dataset.get_sampler()
         self.val_dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=False)
-        self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
+        self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, sampler=self.train_sampler, shuffle=False, num_workers=8)
         self.val_loader = DataLoader(self.val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
         self.start_epoch = 0
         self.best_val_loss = float('inf')  # Initialize best validation loss to infinity
