@@ -14,7 +14,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import glob
 from torch.utils.tensorboard import SummaryWriter  # Import TensorBoard
 from dataset.bc_dataset import SekiroDataset
-
+from collections import Counter
 
 class Trainer:
     """
@@ -53,15 +53,35 @@ class Trainer:
         ], amsgrad=True, weight_decay=0.01)
         self.train_dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=True)
         self.train_sampler = self.train_dataset.get_sampler()
+        self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
         self.val_dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=False)
-        self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, sampler=self.train_sampler, shuffle=False, num_workers=8)
         self.val_loader = DataLoader(self.val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
+        self.class_weights = self.train_dataset.get_class_weights().to(self.device)
         self.start_epoch = 0
         self.best_val_loss = float('inf')  # Initialize best validation loss to infinity
         if args.resume:
             self.load_checkpoint()
 
         self.writer = SummaryWriter(log_dir='logs')  # Initialize TensorBoard writer with log directory
+
+    def get_class_weights(self):
+        """
+        Create a weighted sampler to handle imbalanced classes.
+
+        Returns:
+            WeightedRandomSampler: A sampler that samples elements according to the specified weights.
+        """
+        # Count the frequency of each class in the dataset
+        class_counts = Counter([label for _, label in self.train_dataset.data])
+        num_samples = len(self.data)
+        # Calculate the weight for each sample
+        class_weights = torch.tensor([num_samples/class_counts[label] for label in range(len(class_counts))])
+        # Create a weighted random sampler
+        class_weights /= class_weights.sum()
+
+        return class_weights
+
+
 
     def train_one_epoch(self, epoch):
         """
@@ -79,7 +99,7 @@ class Trainer:
             labels = labels.to(self.device)
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
-            loss = F.cross_entropy(outputs, labels)
+            loss = F.cross_entropy(outputs, labels, weight=self.class_weights)
             loss.backward()
             self.optimizer.step()
             running_loss += loss.item()

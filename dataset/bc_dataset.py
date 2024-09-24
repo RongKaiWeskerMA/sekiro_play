@@ -42,7 +42,7 @@ class SekiroDataset(Dataset):
         if train_set:
             self.label_path = [os.path.join(data_dir, f"session_{i}", "label.csv") for i in range(1, session_range+1)]
         else:
-            self.label_path = [os.path.join(data_dir, f"session_{i}", "label.csv") for i in range(session_range+1, 21)]
+            self.label_path = [os.path.join(data_dir, f"session_{i}", "label.csv") for i in range(session_range+1, 20)]
         
         self.key2action =  {
             'w': 0,
@@ -135,7 +135,6 @@ class SekiroDataset(Dataset):
         
         # Calculate the weight for each sample
         weights = [1.0 / class_counts[label] for _, label in self.data]
-        
         # Create a weighted random sampler
         sampler = WeightedRandomSampler(weights, num_samples)
         return sampler
