@@ -56,7 +56,7 @@ class Trainer:
         self.train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
         self.val_dataset = SekiroDataset(data_dir='data/Sekiro', session_range=18, train_set=False)
         self.val_loader = DataLoader(self.val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
-        self.class_weights = self.train_dataset.get_class_weights().to(self.device)
+        self.class_weights = self.get_class_weights().to(self.device)
         self.start_epoch = 0
         self.best_val_loss = float('inf')  # Initialize best validation loss to infinity
         if args.resume:
@@ -73,7 +73,7 @@ class Trainer:
         """
         # Count the frequency of each class in the dataset
         class_counts = Counter([label for _, label in self.train_dataset.data])
-        num_samples = len(self.data)
+        num_samples = len(self.train_dataset.data)
         # Calculate the weight for each sample
         class_weights = torch.tensor([num_samples/class_counts[label] for label in range(len(class_counts))])
         # Create a weighted random sampler
